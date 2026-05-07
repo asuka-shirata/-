@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(open \"/Users/m0224/Desktop/ClaudeCode勉強会/売上分析/売上分析レポート.xlsx\")",
+      "Bash(osascript -e 'tell application \"Microsoft Excel\" to version')",
+      "Bash(python3 -c \"import reportlab; print\\('reportlab OK'\\)\")",
+      "Bash(python3 -c \"import matplotlib; print\\('matplotlib OK'\\)\")",
+      "Bash(open \"/Users/m0224/Desktop/ClaudeCode勉強会/武の道/index.html\")"
+    ]
+  }
+}

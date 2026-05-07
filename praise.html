@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>褒め & 相性チェック</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 40px 16px;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 20px;
+      padding: 36px 32px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    }
+
+    h2 {
+      font-size: 1.4rem;
+      color: #333;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      color: #999;
+      font-size: 0.88rem;
+      margin-bottom: 22px;
+    }
+
+    /* ── 名前リスト ── */
+    .name-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+      min-height: 36px;
+    }
+
+    .name-tag {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 0.9rem;
+      animation: popIn 0.25s ease;
+    }
+
+    .name-tag button {
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.8);
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+      padding: 0;
+      transition: color 0.15s;
+    }
+
+    .name-tag button:hover { color: white; }
+
+    @keyframes popIn {
+      from { opacity: 0; transform: scale(0.7); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    /* ── 入力欄 ── */
+    .input-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 12px 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 12px;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus { border-color: #667eea; }
+    input[type="text"].error { border-color: #f5576c; }
+
+    .btn {
+      padding: 12px 20px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    .btn:hover  { opacity: 0.88; transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+
+    .btn-outline {
+      background: none;
+      border: 2px solid #667eea;
+      color: #667eea;
+    }
+
+    .btn-outline:hover { background: #f0f0ff; }
+
+    /* ── 褒めカード ── */
+    .praise-card {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      border-radius: 16px;
+      padding: 22px 20px;
+      margin-top: 14px;
+      text-align: center;
+      animation: fadeUp 0.4s ease;
+    }
+
+    .praise-card .big-emoji { font-size: 2.2rem; }
+    .praise-card .pname    { font-size: 1.25rem; font-weight: bold; color: white; margin: 6px 0; }
+    .praise-card .ptext    { font-size: 0.98rem; color: rgba(255,255,255,0.95); line-height: 1.7; }
+
+    /* ── 相性カード ── */
+    .compat-result {
+      margin-top: 14px;
+      animation: fadeUp 0.4s ease;
+    }
+
+    .compat-pair {
+      background: #fafafa;
+      border: 2px solid #eee;
+      border-radius: 14px;
+      padding: 18px 20px;
+      margin-bottom: 12px;
+    }
+
+    .compat-pair:last-child { margin-bottom: 0; }
+
+    .pair-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .pair-names {
+      font-size: 1rem;
+      font-weight: bold;
+      color: #333;
+    }
+
+    .pair-score {
+      font-size: 1.4rem;
+      font-weight: bold;
+    }
+
+    .bar-bg {
+      background: #eee;
+      border-radius: 99px;
+      height: 10px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    .compat-comment {
+      font-size: 0.88rem;
+      color: #666;
+      line-height: 1.5;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .empty-hint {
+      color: #bbb;
+      font-size: 0.88rem;
+      text-align: center;
+      padding: 8px 0;
+    }
+
+    .action-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ① 名前を登録するカード -->
+  <div class="card">
+    <h2>👤 名前を登録する</h2>
+    <p class="subtitle">名前を追加してから褒めたり相性を調べたりできます（2〜6人）</p>
+
+    <div class="name-list" id="nameList">
+      <span class="empty-hint" id="emptyHint">まだ誰も登録されていません</span>
+    </div>
+
+    <div class="input-row">
+      <input type="text" id="nameInput" placeholder="お名前を入力..." maxlength="20">
+      <button class="btn" onclick="addName()">追加</button>
+    </div>
+  </div>
+
+  <!-- ② 褒めるカード -->
+  <div class="card">
+    <h2>✨ 褒める</h2>
+    <p class="subtitle">登録した名前を選んで褒めてもらおう</p>
+
+    <div class="input-row">
+      <select id="praiseSelect" style="flex:1;padding:12px 14px;border:2px solid #e0e0e0;border-radius:12px;font-size:1rem;outline:none;background:white;color:#333;">
+        <option value="">-- 名前を選択 --</option>
+      </select>
+      <button class="btn" onclick="doPraise()">褒める!</button>
+    </div>
+
+    <div id="praiseResult"></div>
+  </div>
+
+  <!-- ③ 相性チェックカード -->
+  <div class="card">
+    <h2>💞 相性チェック</h2>
+    <p class="subtitle">2人以上登録すると相性を調べられます</p>
+
+    <div class="action-row">
+      <button class="btn" onclick="checkAll()">全員の相性を調べる</button>
+      <button class="btn btn-outline" onclick="checkTwo()">2人を選んで調べる</button>
+    </div>
+
+    <!-- 2人選択UI -->
+    <div id="twoSelectUI" style="display:none;margin-top:16px;">
+      <div class="input-row" style="gap:8px;align-items:center;flex-wrap:wrap;">
+        <select id="select1" style="flex:1;padding:10px 12px;border:2px solid #e0e0e0;border-radius:10px;font-size:0.95rem;outline:none;background:white;">
+          <option value="">-- Aさん --</option>
+        </select>
+        <span style="color:#999;font-weight:bold;">×</span>
+        <select id="select2" style="flex:1;padding:10px 12px;border:2px solid #e0e0e0;border-radius:10px;font-size:0.95rem;outline:none;background:white;">
+          <option value="">-- Bさん --</option>
+        </select>
+        <button class="btn" style="padding:10px 16px;" onclick="checkSelectedTwo()">診断!</button>
+      </div>
+    </div>
+
+    <div id="compatResult"></div>
+  </div>
+
+</div>
+
+<script>
+  // ── データ ──
+  const names = [];
+
+  const praises = [
+    { emoji: "✨", text: "さんは、周りの人を自然と笑顔にする、太陽のような存在です！その明るさと優しさは、誰にでも伝わっています。" },
+    { emoji: "🌟", text: "さんの行動力と情熱は、本当に素晴らしいです！困難な状況でも前向きに取り組む姿勢に、周囲は勇気をもらっています。" },
+    { emoji: "💎", text: "さんは、細部にまで気を配ることができる、とても丁寧な方です。その誠実さと真心が、周りの人たちから深く信頼されています。" },
+    { emoji: "🚀", text: "さんのアイデアはいつも斬新で、新しい視点を与えてくれます！その創造力と発想力は、本当に唯一無二です。" },
+    { emoji: "🌈", text: "さんがいると場の雰囲気がパッと明るくなります！その存在感と温かさは、みんなにとって大きな力になっています。" },
+    { emoji: "🏆", text: "さんは努力を惜しまない、真の頑張り屋さんです！コツコツと積み重ねる姿勢と継続力は、周りの人の手本になっています。" },
+    { emoji: "🌸", text: "さんの思いやりの深さは格別です。相手の気持ちを大切にする優しさと共感力は、誰もが羨む素晴らしい才能です。" },
+    { emoji: "⚡", text: "さんは何事にも全力で取り組む、エネルギーに満ちた方です！その熱意と集中力は、目標を必ず達成させる強さを持っています。" },
+  ];
+
+  const compatComments = [
+    { min: 90, emoji: "💑", label: "運命的な相性！",   color: "#ff6b9d", text: "ふたりは運命で結ばれた最強コンビ！何をやっても息ぴったりで、まるでひとつの心のよう。" },
+    { min: 75, emoji: "💛", label: "とても良い相性！",  color: "#ffb347", text: "ふたりの波長はよく合っています。一緒にいると自然と楽しい時間が生まれる、素敵な関係です。" },
+    { min: 60, emoji: "😊", label: "良い相性",         color: "#5bc8af", text: "ふたりはバランスの取れた良い関係。お互いの良いところを引き出し合えます。" },
+    { min: 45, emoji: "🤝", label: "まずまずの相性",   color: "#7eb8f7", text: "少し違いもあるけれど、それがお互いを成長させる刺激になっています。" },
+    { min: 30, emoji: "🌱", label: "これから育つ相性", color: "#a0c878", text: "今はまだ発展途上ですが、時間をかければきっと素晴らしい関係が育ちます。" },
+    { min:  0, emoji: "🎭", label: "ユニークな組み合わせ", color: "#c9a0dc", text: "個性的なふたり！ぶつかることもあるかもしれないけど、それがまた面白い化学反応を生む！" },
+  ];
+
+  // ── 名前をハッシュして相性スコアを決定論的に計算 ──
+  function calcScore(a, b) {
+    const key = [a, b].sort().join('\0');
+    let h = 0;
+    for (let i = 0; i < key.length; i++) {
+      h = (Math.imul(31, h) + key.charCodeAt(i)) | 0;
+    }
+    return Math.abs(h) % 71 + 30; // 30〜100
+  }
+
+  function scoreColor(score) {
+    const c = compatComments.find(c => score >= c.min);
+    return c ? c.color : '#999';
+  }
+
+  function scoreComment(score) {
+    return compatComments.find(c => score >= c.min) || compatComments[compatComments.length - 1];
+  }
+
+  // ── UI更新 ──
+  function renderNameList() {
+    const list = document.getElementById('nameList');
+    const hint = document.getElementById('emptyHint');
+
+    // タグ以外を消してから再描画
+    list.innerHTML = '';
+
+    if (names.length === 0) {
+      list.appendChild(Object.assign(document.createElement('span'), {
+        className: 'empty-hint', textContent: 'まだ誰も登録されていません'
+      }));
+    } else {
+      names.forEach((name, i) => {
+        const tag = document.createElement('div');
+        tag.className = 'name-tag';
+        tag.innerHTML = `${escapeHtml(name)}<button onclick="removeName(${i})" title="削除">×</button>`;
+        list.appendChild(tag);
+      });
+    }
+
+    // セレクトボックスを同期
+    syncSelects();
+  }
+
+  function syncSelects() {
+    ['praiseSelect', 'select1', 'select2'].forEach(id => {
+      const sel = document.getElementById(id);
+      const prev = sel.value;
+      const placeholder = sel.options[0].text;
+      sel.innerHTML = `<option value="">${placeholder}</option>`;
+      names.forEach(n => {
+        const opt = document.createElement('option');
+        opt.value = n;
+        opt.textContent = n;
+        sel.appendChild(opt);
+      });
+      if (names.includes(prev)) sel.value = prev;
+    });
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── 名前の追加・削除 ──
+  function addName() {
+    const input = document.getElementById('nameInput');
+    const name = input.value.trim();
+    if (!name) { shake(input); return; }
+    if (names.includes(name)) { shake(input); input.value = ''; return; }
+    if (names.length >= 6) { alert('登録できるのは最大6人までです'); return; }
+    names.push(name);
+    input.value = '';
+    renderNameList();
+  }
+
+  function removeName(i) {
+    names.splice(i, 1);
+    renderNameList();
+    document.getElementById('praiseResult').innerHTML = '';
+    document.getElementById('compatResult').innerHTML = '';
+  }
+
+  function shake(el) {
+    el.classList.add('error');
+    setTimeout(() => el.classList.remove('error'), 800);
+    el.focus();
+  }
+
+  // ── 褒める ──
+  function doPraise() {
+    const name = document.getElementById('praiseSelect').value;
+    if (!name) { alert('名前を選んでください'); return; }
+    const p = praises[Math.floor(Math.random() * praises.length)];
+    const box = document.getElementById('praiseResult');
+    box.innerHTML = `
+      <div class="praise-card">
+        <div class="big-emoji">${p.emoji}</div>
+        <div class="pname">${escapeHtml(name)} さん</div>
+        <div class="ptext">${escapeHtml(name)}${p.text}</div>
+      </div>`;
+  }
+
+  // ── 相性チェック ──
+  function renderCompatPairs(pairs) {
+    const box = document.getElementById('compatResult');
+    box.innerHTML = '';
+
+    const wrap = document.createElement('div');
+    wrap.className = 'compat-result';
+
+    pairs.forEach(([a, b]) => {
+      const score = calcScore(a, b);
+      const c = scoreComment(score);
+      const color = scoreColor(score);
+      const div = document.createElement('div');
+      div.className = 'compat-pair';
+      div.innerHTML = `
+        <div class="pair-header">
+          <div class="pair-names">${escapeHtml(a)} × ${escapeHtml(b)}</div>
+          <div class="pair-score" style="color:${color}">${c.emoji} ${score}%</div>
+        </div>
+        <div class="bar-bg">
+          <div class="bar-fill" style="width:0%;background:${color}" data-target="${score}"></div>
+        </div>
+        <div class="compat-comment"><strong>${c.label}</strong> — ${c.text}</div>
+      `;
+      wrap.appendChild(div);
+    });
+
+    box.appendChild(wrap);
+
+    // バーをアニメーション
+    requestAnimationFrame(() => {
+      document.querySelectorAll('.bar-fill').forEach(el => {
+        el.style.width = el.dataset.target + '%';
+      });
+    });
+  }
+
+  function checkAll() {
+    if (names.length < 2) { alert('2人以上登録してください'); return; }
+    const pairs = [];
+    for (let i = 0; i < names.length; i++)
+      for (let j = i + 1; j < names.length; j++)
+        pairs.push([names[i], names[j]]);
+    renderCompatPairs(pairs);
+  }
+
+  function checkTwo() {
+    if (names.length < 2) { alert('2人以上登録してください'); return; }
+    const ui = document.getElementById('twoSelectUI');
+    ui.style.display = ui.style.display === 'none' ? 'block' : 'none';
+    document.getElementById('compatResult').innerHTML = '';
+  }
+
+  function checkSelectedTwo() {
+    const a = document.getElementById('select1').value;
+    const b = document.getElementById('select2').value;
+    if (!a || !b) { alert('2人を選んでください'); return; }
+    if (a === b) { alert('同じ人を選んでいます'); return; }
+    renderCompatPairs([[a, b]]);
+  }
+
+  // ── Enterキー対応 ──
+  document.getElementById('nameInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addName();
+  });
+</script>
+</body>
+</html>

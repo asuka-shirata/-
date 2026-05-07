@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip3 install:*)",
+      "Bash(python3 -c \"import reportlab; import matplotlib; print\\('OK'\\)\")",
+      "Bash(python3 generate_pdf.py)",
+      "Read(//System/Library/Fonts/**)",
+      "Read(//Library/Fonts/**)",
+      "Bash(python3 -c \"import urllib.request; print\\('ok'\\)\")",
+      "Bash(python3 -c ':*)",
+      "Bash(node --check /Users/m0224/Desktop/ClaudeCode勉強会/武の道/index.html)",
+      "Bash(node -e ':*)",
+      "Bash(/usr/local/bin/node --version)",
+      "Bash(/opt/homebrew/bin/node --version)"
+    ],
+    "additionalDirectories": [
+      "/Users/m0224/Desktop/ClaudeCode勉強会"
+    ]
+  }
+}

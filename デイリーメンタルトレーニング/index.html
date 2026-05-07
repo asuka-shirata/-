@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>デイリーメンタルトレーニング</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --bg:      #FAFAF7;
+      --white:   #FFFFFF;
+      --black:   #111111;
+      --red:     #E8391D;
+      --yellow:  #F5C842;
+      --blue:    #1A4CFF;
+      --blue-l:  #E8EDFF;
+      --green:   #00A878;
+      --gray:    #E8E8E4;
+      --gray-2:  #C8C8C4;
+      --text:    #111111;
+      --text-2:  #666660;
+      --text-3:  #999993;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', 'Noto Sans JP', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .geo-deco { position: fixed; pointer-events: none; z-index: 0; }
+    .geo-1 { top: -60px; right: -60px; width: 240px; height: 240px; background: var(--yellow); border-radius: 50%; opacity: 0.22; }
+    .geo-2 { bottom: 80px; left: -40px; width: 160px; height: 160px; background: var(--red); opacity: 0.1; }
+
+    .screen {
+      position: relative; z-index: 1;
+      display: none; flex-direction: column; align-items: center;
+      min-height: 100vh; padding: 0 20px 80px;
+    }
+    .screen.active { display: flex; }
+
+    /* ─── 共通ヘッダー ─── */
+    .page-header {
+      width: 100%; max-width: 640px;
+      padding: 40px 0 0;
+    }
+    .page-eyebrow {
+      font-size: 10px; font-weight: 700; letter-spacing: 4px;
+      text-transform: uppercase; color: var(--text-2); margin-bottom: 10px;
+    }
+    .page-title {
+      font-size: clamp(22px, 5vw, 32px);
+      font-weight: 900; letter-spacing: -0.5px;
+      color: var(--black); line-height: 1.1;
+    }
+    .page-title-bar {
+      display: block; width: 40px; height: 5px;
+      margin-top: 12px;
+    }
+    .bar-red   { background: var(--red); }
+    .bar-blue  { background: var(--blue); }
+    .bar-green { background: var(--green); }
+    .bar-yellow { background: var(--yellow); }
+
+    .date-chip {
+      display: inline-flex; align-items: center;
+      margin-top: 14px;
+      background: var(--black); color: var(--white);
+      font-size: 11px; font-weight: 600; letter-spacing: 1px;
+      padding: 5px 14px; border-radius: 2px;
+    }
+
+    /* ─── ステップインジケーター ─── */
+    .steps {
+      width: 100%; max-width: 640px;
+      display: flex; align-items: center;
+      margin-top: 24px; gap: 0;
+    }
+    .step-item {
+      display: flex; flex-direction: column; align-items: center; gap: 5px;
+      flex-shrink: 0;
+    }
+    .step-num {
+      width: 32px; height: 32px;
+      border: 2px solid var(--black);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 900;
+      background: var(--gray); color: var(--text-2);
+      transition: all 0.2s;
+    }
+    .step-num.active  { background: var(--black); color: var(--white); }
+    .step-num.done    { background: var(--green);  color: var(--white); border-color: var(--green); }
+    .step-name {
+      font-size: 9px; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--text-3); white-space: nowrap;
+    }
+    .step-name.active { color: var(--black); }
+    .step-name.done   { color: var(--green); }
+    .step-line {
+      flex: 1; height: 2px; background: var(--gray-2);
+      margin: 0 6px; margin-bottom: 20px;
+    }
+    .step-line.done { background: var(--green); }
+
+    /* ─── カード ─── */
+    .card {
+      width: 100%; max-width: 640px; margin-top: 20px;
+      background: var(--white); border: 2px solid var(--black); padding: 24px 24px;
+    }
+    .section-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 4px;
+      text-transform: uppercase; color: var(--text-2); margin-bottom: 18px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .section-label::before {
+      content: ''; display: inline-block; width: 8px; height: 8px;
+      flex-shrink: 0;
+    }
+    .label-red::before   { background: var(--red); }
+    .label-blue::before  { background: var(--blue); }
+    .label-green::before { background: var(--green); }
+
+    /* ─── 時間入力 ─── */
+    .time-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .time-item label {
+      display: block; font-size: 11px; font-weight: 600;
+      letter-spacing: 2px; text-transform: uppercase;
+      color: var(--text-2); margin-bottom: 7px;
+    }
+    .time-item input[type="time"] {
+      width: 100%; background: var(--bg); border: 2px solid var(--black);
+      color: var(--black); font-family: 'Inter', sans-serif;
+      font-size: 24px; font-weight: 700; text-align: center;
+      padding: 12px 8px; outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      -webkit-appearance: none; border-radius: 0; cursor: pointer;
+    }
+    .time-item input[type="time"]:focus {
+      border-color: var(--red); box-shadow: 4px 4px 0 var(--red);
+    }
+
+    /* ─── チェック項目（朝タスク） ─── */
+    .check-list { display: flex; flex-direction: column; gap: 9px; }
+    .check-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 13px 18px; border: 2px solid var(--gray); background: var(--bg);
+      cursor: pointer; transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+      user-select: none;
+    }
+    .check-item:hover { border-color: var(--black); }
+    .check-item.checked {
+      background: var(--yellow); border-color: var(--black);
+      box-shadow: 4px 4px 0 var(--black);
+    }
+    .check-label { display: flex; align-items: center; gap: 14px; }
+    .check-icon-wrap {
+      width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;
+      background: var(--white); border: 2px solid var(--black); flex-shrink: 0;
+    }
+    .check-item.checked .check-icon-wrap { background: var(--black); }
+    .check-icon-wrap svg { width: 19px; height: 19px; }
+    .check-item.checked .check-icon-wrap svg { filter: invert(1); }
+    .check-text { font-size: 14px; font-weight: 600; color: var(--black); line-height: 1.3; }
+    .check-text small {
+      display: block; font-size: 10px; font-weight: 500;
+      color: var(--text-2); letter-spacing: 2px; text-transform: uppercase; margin-top: 1px;
+    }
+    .check-item.checked .check-text small { color: var(--black); opacity: 0.6; }
+    .check-mark {
+      width: 26px; height: 26px; border: 2px solid var(--gray-2);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .check-item.checked .check-mark { background: var(--black); border-color: var(--black); }
+    .check-mark svg { width: 13px; height: 13px; opacity: 0; transition: opacity 0.15s; }
+    .check-item.checked .check-mark svg { opacity: 1; }
+
+    /* ─── 面談チェック項目 ─── */
+    .icheck-list { display: flex; flex-direction: column; gap: 9px; margin-bottom: 18px; }
+    .icheck-item {
+      border: 2px solid var(--gray); background: var(--bg);
+      cursor: pointer; transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+      user-select: none;
+    }
+    .icheck-item:hover { border-color: var(--blue); }
+    .icheck-item.checked {
+      background: var(--blue-l); border-color: var(--blue);
+      box-shadow: 4px 4px 0 var(--blue);
+    }
+    .icheck-main {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      padding: 14px 18px; gap: 10px;
+    }
+    .icheck-left { display: flex; align-items: flex-start; gap: 12px; flex: 1; }
+    .icheck-icon {
+      width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
+      border: 2px solid var(--black); background: var(--white); flex-shrink: 0; margin-top: 1px;
+    }
+    .icheck-item.checked .icheck-icon { background: var(--blue); border-color: var(--blue); }
+    .icheck-item.checked .icheck-icon svg { filter: invert(1); }
+    .icheck-icon svg { width: 16px; height: 16px; }
+    .icheck-body { flex: 1; }
+    .icheck-title { font-size: 13px; font-weight: 700; color: var(--black); line-height: 1.4; }
+    .icheck-desc {
+      font-size: 11px; font-weight: 400; color: var(--text-2);
+      line-height: 1.7; margin-top: 5px; padding: 8px 10px;
+      background: rgba(0,0,0,0.03); border-left: 3px solid var(--gray-2);
+    }
+    .icheck-item.checked .icheck-desc { border-left-color: var(--blue); background: rgba(26,76,255,0.04); }
+    .icheck-mark {
+      width: 24px; height: 24px; border: 2px solid var(--gray-2);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;
+    }
+    .icheck-item.checked .icheck-mark { background: var(--blue); border-color: var(--blue); }
+    .icheck-mark svg { width: 11px; height: 11px; opacity: 0; transition: opacity 0.15s; }
+    .icheck-item.checked .icheck-mark svg { opacity: 1; }
+
+    /* ─── メモ入力 ─── */
+    .memo-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 3px;
+      text-transform: uppercase; color: var(--text-2); margin-bottom: 8px;
+    }
+    .memo-textarea {
+      width: 100%; background: var(--bg); border: 2px solid var(--black);
+      color: var(--black); font-family: 'Inter', 'Noto Sans JP', sans-serif;
+      font-size: 13px; font-weight: 400; line-height: 1.7;
+      padding: 12px 14px; outline: none; resize: vertical; border-radius: 0;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .memo-textarea::placeholder { color: var(--text-3); }
+    .memo-textarea:focus { border-color: var(--blue); box-shadow: 4px 4px 0 var(--blue); }
+    .memo-textarea.large { min-height: 160px; }
+    .memo-textarea.large:focus { border-color: var(--green); box-shadow: 4px 4px 0 var(--green); }
+
+    /* ─── 今日の登録状況（面談画面上部） ─── */
+    .interview-log {
+      width: 100%; max-width: 640px; margin-top: 20px;
+      border: 2px solid var(--black); overflow: hidden;
+    }
+    .interview-log-header {
+      background: var(--black); padding: 10px 18px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .interview-log-title {
+      font-size: 10px; font-weight: 800; letter-spacing: 3px;
+      text-transform: uppercase; color: var(--white);
+    }
+    .interview-log-count {
+      font-size: 20px; font-weight: 900; color: var(--yellow); line-height: 1;
+    }
+    .interview-log-count span { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.6); margin-left: 3px; }
+    .interview-log-body { background: var(--white); }
+    .interview-log-empty {
+      padding: 16px 18px; font-size: 11px; font-weight: 600;
+      letter-spacing: 1px; color: var(--text-3); text-transform: uppercase;
+    }
+    .interview-log-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 18px; border-bottom: 1px solid var(--gray);
+    }
+    .interview-log-row:last-child { border-bottom: none; }
+    .log-seq {
+      font-size: 9px; font-weight: 800; letter-spacing: 1px;
+      background: var(--yellow); color: var(--black);
+      padding: 2px 7px; border-radius: 2px; flex-shrink: 0;
+    }
+    .log-time {
+      font-size: 11px; font-weight: 700; color: var(--text-2); flex-shrink: 0;
+    }
+    .log-badges { display: flex; gap: 5px; flex-wrap: wrap; flex: 1; }
+    .log-badge {
+      font-size: 9px; font-weight: 700; letter-spacing: 0.5px;
+      padding: 2px 7px; border-radius: 2px;
+    }
+    .log-badge.on  { background: var(--blue-l); color: var(--blue); }
+    .log-badge.off { background: var(--gray);   color: var(--text-3); }
+
+    /* ─── 記録成功トースト ─── */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: var(--green); color: var(--white);
+      font-size: 12px; font-weight: 700; letter-spacing: 2px;
+      padding: 12px 28px; border: 2px solid var(--black);
+      box-shadow: 4px 4px 0 var(--black);
+      opacity: 0; pointer-events: none; transition: opacity 0.3s;
+      white-space: nowrap; z-index: 200;
+    }
+    .toast.show { opacity: 1; }
+
+    /* ─── ボタン類 ─── */
+    .btn-primary {
+      display: block; width: 100%;
+      padding: 18px 0; background: var(--red);
+      color: var(--white); font-family: 'Inter', 'Noto Sans JP', sans-serif;
+      font-size: 13px; font-weight: 700; letter-spacing: 4px; text-transform: uppercase;
+      border: 2px solid var(--black); cursor: pointer;
+      box-shadow: 4px 4px 0 var(--black); transition: all 0.15s; border-radius: 0;
+    }
+    .btn-primary:hover { background: var(--black); box-shadow: 6px 6px 0 var(--red); }
+    .btn-primary:active { box-shadow: 2px 2px 0 var(--black); transform: translate(2px,2px); }
+    .btn-primary.blue  { background: var(--blue); }
+    .btn-primary.blue:hover  { background: var(--black); box-shadow: 6px 6px 0 var(--blue); }
+    .btn-primary.green { background: var(--green); }
+    .btn-primary.green:hover { background: var(--black); box-shadow: 6px 6px 0 var(--green); }
+
+    .btn-secondary {
+      display: block; width: 100%;
+      padding: 14px 0; background: transparent;
+      color: var(--black); font-family: 'Inter', 'Noto Sans JP', sans-serif;
+      font-size: 11px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase;
+      border: 2px solid var(--gray-2); cursor: pointer;
+      transition: all 0.15s; border-radius: 0;
+    }
+    .btn-secondary:hover { border-color: var(--black); background: var(--black); color: var(--white); }
+
+    .btn-ghost {
+      background: none; border: none; cursor: pointer;
+      font-size: 11px; font-weight: 700; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--text-3);
+      padding: 8px 0; text-decoration: underline;
+      text-underline-offset: 3px; transition: color 0.15s;
+    }
+    .btn-ghost:hover { color: var(--black); }
+
+    .btn-wrap {
+      width: 100%; max-width: 640px; margin-top: 16px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .btn-row {
+      display: flex; gap: 10px;
+    }
+    .btn-row > * { flex: 1; }
+
+    /* ─── 結果画面 ─── */
+    .result-complete {
+      width: 100%; max-width: 640px;
+      margin-top: 20px;
+      background: var(--black); padding: 28px 28px;
+      text-align: center;
+    }
+    .result-complete-icon {
+      font-size: 36px; margin-bottom: 12px;
+    }
+    .result-complete-title {
+      font-size: 18px; font-weight: 900; letter-spacing: 2px;
+      color: var(--yellow); margin-bottom: 6px;
+    }
+    .result-complete-sub {
+      font-size: 11px; font-weight: 500; letter-spacing: 2px;
+      color: rgba(255,255,255,0.55); text-transform: uppercase;
+    }
+
+    .summary-grid {
+      width: 100%; max-width: 640px;
+      margin-top: 0; display: grid; grid-template-columns: 1fr 1fr 1fr;
+      border: 2px solid var(--black); border-top: none;
+    }
+    .summary-cell {
+      padding: 18px 12px; text-align: center;
+      border-right: 2px solid var(--black);
+    }
+    .summary-cell:last-child { border-right: none; }
+    .summary-cell:nth-child(1) { background: var(--blue); }
+    .summary-cell:nth-child(2) { background: var(--blue); }
+    .summary-cell:nth-child(3) { background: var(--yellow); }
+    .summary-label {
+      font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+      color: rgba(255,255,255,0.7); margin-bottom: 8px;
+    }
+    .summary-cell:nth-child(3) .summary-label { color: rgba(0,0,0,0.45); }
+    .summary-value {
+      font-size: clamp(17px,4vw,24px); font-weight: 900;
+      color: var(--white); letter-spacing: -0.5px;
+    }
+    .summary-cell:nth-child(3) .summary-value { color: var(--black); }
+    .summary-unit { font-size: 11px; font-weight: 600; margin-left: 1px; }
+
+    .habit-result {
+      width: 100%; max-width: 640px;
+      margin-top: 12px; background: var(--white);
+      border: 2px solid var(--black); padding: 20px 20px;
+    }
+    .habit-grid {
+      display: grid; grid-template-columns: repeat(4,1fr);
+      border: 2px solid var(--black); margin-top: 14px;
+    }
+    .habit-badge {
+      text-align: center; padding: 14px 6px;
+      border-right: 2px solid var(--black);
+      font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+      color: var(--text-2); background: var(--bg); position: relative;
+    }
+    .habit-badge:last-child { border-right: none; }
+    .habit-badge.done { background: var(--green); color: var(--white); }
+    .habit-badge .hb-icon { display:flex; align-items:center; justify-content:center; margin:0 auto 6px; width:28px; height:28px; }
+    .habit-badge .hb-icon svg { width: 20px; height: 20px; }
+    .habit-badge.done .hb-icon svg { filter: invert(1); }
+    .habit-badge .hb-mark { position:absolute; top:5px; right:6px; font-size:9px; font-weight:900; color:var(--white); }
+
+    .interview-summary {
+      width: 100%; max-width: 640px;
+      margin-top: 12px; background: var(--white);
+      border: 2px solid var(--blue); overflow: hidden;
+    }
+    .interview-summary-header {
+      background: var(--blue); padding: 11px 20px;
+      font-size: 10px; font-weight: 800; letter-spacing: 3px;
+      text-transform: uppercase; color: var(--white);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .interview-summary-count {
+      font-size: 22px; font-weight: 900; color: var(--yellow); line-height: 1;
+    }
+    .interview-summary-count span { font-size: 11px; color: rgba(255,255,255,0.65); margin-left: 3px; }
+
+    .reflection-summary {
+      width: 100%; max-width: 640px;
+      margin-top: 12px; background: var(--white);
+      border: 2px solid var(--black); padding: 20px 20px;
+    }
+    .reflection-text {
+      font-size: 13px; line-height: 1.8; color: var(--text);
+      white-space: pre-wrap; margin-top: 12px;
+    }
+    .reflection-empty { font-size: 12px; color: var(--text-3); font-style: italic; margin-top: 12px; }
+
+    /* ─── 戻るリンク ─── */
+    .back-link {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 10px; font-weight: 700; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--text-3);
+      background: none; border: none; cursor: pointer;
+      padding: 0; margin-top: 20px; transition: color 0.15s;
+    }
+    .back-link:hover { color: var(--black); }
+
+    /* ─── 履歴画面 ─── */
+    .history-header { width: 100%; max-width: 900px; padding: 48px 0 20px; }
+    .history-title {
+      font-size: clamp(20px,4vw,30px); font-weight: 900; letter-spacing: -0.5px; color: var(--black);
+    }
+    .history-title::after {
+      content: ''; display: block; width: 48px; height: 6px;
+      background: var(--yellow); margin-top: 14px;
+    }
+    .history-actions {
+      width: 100%; max-width: 900px;
+      display: flex; gap: 10px; margin-top: 20px;
+      align-items: center; justify-content: space-between;
+    }
+    .history-count { font-size: 12px; font-weight: 600; letter-spacing: 1px; color: var(--text-2); }
+    .btn-excel {
+      display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px;
+      background: var(--green); color: var(--white);
+      font-family: 'Inter','Noto Sans JP',sans-serif;
+      font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+      border: 2px solid var(--black); cursor: pointer;
+      box-shadow: 3px 3px 0 var(--black); transition: all 0.15s;
+    }
+    .btn-excel:hover { background: var(--black); box-shadow: 3px 3px 0 var(--green); }
+    .btn-clear {
+      display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px;
+      background: transparent; color: var(--text-3);
+      font-family: 'Inter','Noto Sans JP',sans-serif;
+      font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;
+      border: 2px solid var(--gray-2); cursor: pointer; transition: all 0.15s;
+    }
+    .btn-clear:hover { border-color: var(--red); color: var(--red); }
+    .history-table-wrap {
+      width: 100%; max-width: 900px; margin-top: 16px;
+      overflow-x: auto; border: 2px solid var(--black);
+    }
+    .history-table {
+      width: 100%; border-collapse: collapse; min-width: 640px; background: var(--white);
+    }
+    .history-table th {
+      background: var(--black); color: var(--white);
+      font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+      padding: 12px 14px; text-align: center; white-space: nowrap;
+    }
+    .history-table th:first-child { text-align: left; }
+    .history-table td {
+      padding: 12px 14px; font-size: 12px; font-weight: 500;
+      border-bottom: 1px solid var(--gray); text-align: center; vertical-align: top;
+    }
+    .history-table td:first-child { text-align: left; font-weight: 600; white-space: nowrap; }
+    .history-table tr:last-child td { border-bottom: none; }
+    .history-table tr:hover td { background: var(--bg); }
+    .badge-done {
+      display: inline-block; background: var(--blue); color: var(--white);
+      font-size: 10px; font-weight: 700; padding: 2px 10px; border-radius: 2px; letter-spacing: 1px;
+    }
+    .badge-seq {
+      display: inline-block; background: var(--yellow); color: var(--black);
+      font-size: 9px; font-weight: 800; padding: 2px 8px; border-radius: 2px;
+      margin-top: 4px; letter-spacing: 1px;
+    }
+    .badge-none {
+      display: inline-block; background: var(--gray); color: var(--text-3);
+      font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 2px;
+    }
+    .td-memo { max-width: 200px; text-align: left !important; font-size: 11px; color: var(--text-2); line-height: 1.5; }
+    .history-empty {
+      padding: 48px 0; text-align: center;
+      font-size: 12px; font-weight: 600; letter-spacing: 2px; color: var(--text-3); text-transform: uppercase;
+    }
+    .btn-history-link {
+      display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px;
+      background: transparent; border: 2px solid var(--black); color: var(--black);
+      font-family: 'Inter','Noto Sans JP',sans-serif;
+      font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+      cursor: pointer; transition: all 0.15s; margin-top: 14px; flex-shrink: 0;
+    }
+    .btn-history-link:hover { background: var(--black); color: var(--white); }
+
+    /* ─── ローディング ─── */
+    .loading {
+      display: none; position: fixed; inset: 0;
+      background: rgba(250,250,247,0.88); backdrop-filter: blur(4px);
+      z-index: 100; align-items: center; justify-content: center; flex-direction: column; gap: 16px;
+    }
+    .loading.active { display: flex; }
+    .loading-text { font-size: 11px; font-weight: 700; letter-spacing: 4px; text-transform: uppercase; color: var(--black); animation: pulse 1.2s infinite; }
+    .spinner { width: 32px; height: 32px; border: 3px solid var(--gray); border-top-color: var(--red); border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin  { to { transform: rotate(360deg); } }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+    .fade-up { animation: fadeUp 0.35s ease forwards; opacity: 0; }
+    .fade-up:nth-child(1){animation-delay:0.05s} .fade-up:nth-child(2){animation-delay:0.12s}
+    .fade-up:nth-child(3){animation-delay:0.19s} .fade-up:nth-child(4){animation-delay:0.26s}
+    .fade-up:nth-child(5){animation-delay:0.33s} .fade-up:nth-child(6){animation-delay:0.40s}
+    .fade-up:nth-child(7){animation-delay:0.47s}
+
+    @media(max-width:480px){
+      .time-grid{grid-template-columns:1fr}
+      .summary-grid{grid-template-columns:1fr 1fr}
+      .summary-cell:nth-child(3){border-right:none;border-top:2px solid var(--black)}
+      .habit-grid{grid-template-columns:repeat(2,1fr)}
+      .habit-badge:nth-child(2){border-right:none}
+      .habit-badge:nth-child(3),.habit-badge:nth-child(4){border-top:2px solid var(--black)}
+      .history-actions{flex-direction:column;align-items:flex-start}
+      .steps{gap:0}
+      .step-name{font-size:8px}
+    }
+  </style>
+</head>
+<body>
+
+<div class="geo-deco geo-1"></div>
+<div class="geo-deco geo-2"></div>
+<div class="toast" id="toast"></div>
+<div class="loading" id="loading"><div class="spinner"></div><div class="loading-text">Loading...</div></div>
+
+<!-- ===================== SCREEN 1: 朝のタスク ===================== -->
+<div class="screen active" id="screen-morning">
+  <div class="page-header">
+    <div class="page-eyebrow">Step 1 / 3</div>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+      <div>
+        <div class="page-title">朝のタスク</div>
+        <span class="page-title-bar bar-red"></span>
+      </div>
+      <button class="btn-history-link" id="btn-open-history-1">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="4" x2="9" y2="9"/></svg>
+        面談履歴
+      </button>
+    </div>
+    <div class="date-chip" id="today-date-1"></div>
+  </div>
+
+  <!-- ステップ -->
+  <div class="steps" id="steps-1">
+    <div class="step-item"><div class="step-num active">1</div><div class="step-name active">朝のタスク</div></div>
+    <div class="step-line"></div>
+    <div class="step-item"><div class="step-num">2</div><div class="step-name">初回面談</div></div>
+    <div class="step-line"></div>
+    <div class="step-item"><div class="step-num">3</div><div class="step-name">振り返り</div></div>
+  </div>
+
+  <!-- 睡眠記録 -->
+  <div class="card">
+    <div class="section-label label-red">睡眠記録</div>
+    <div class="time-grid">
+      <div class="time-item"><label>就寝</label><input type="time" id="sleep-time" value="23:00"></div>
+      <div class="time-item"><label>起床</label><input type="time" id="wake-time"  value="07:00"></div>
+    </div>
+  </div>
+
+  <!-- 朝タスク -->
+  <div class="card">
+    <div class="section-label label-red">朝のタスク</div>
+    <div class="check-list" id="check-list">
+
+      <div class="check-item" data-key="stretch">
+        <div class="check-label">
+          <div class="check-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4" r="1.5"/><line x1="12" y1="5.5" x2="12" y2="13"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="12" y1="13" x2="8" y2="20"/><line x1="12" y1="13" x2="16" y2="20"/></svg>
+          </div>
+          <div class="check-text">ストレッチ<small>Stretching</small></div>
+        </div>
+        <div class="check-mark"><svg viewBox="0 0 14 14" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,7 5.5,10.5 12,3.5"/></svg></div>
+      </div>
+
+      <div class="check-item" data-key="sparkling">
+        <div class="check-label">
+          <div class="check-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10l-1.5 16H8.5Z"/><line x1="7" y1="8" x2="17" y2="8"/><circle cx="10" cy="12" r="0.8" fill="currentColor" stroke="none"/><circle cx="14" cy="11" r="0.8" fill="currentColor" stroke="none"/><circle cx="12" cy="14" r="0.8" fill="currentColor" stroke="none"/></svg>
+          </div>
+          <div class="check-text">炭酸水を飲んだ<small>Sparkling Water</small></div>
+        </div>
+        <div class="check-mark"><svg viewBox="0 0 14 14" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,7 5.5,10.5 12,3.5"/></svg></div>
+      </div>
+
+      <div class="check-item" data-key="protein">
+        <div class="check-label">
+          <div class="check-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12C4.5 8 7.5 5 12 5s7.5 3 7.5 7c0 2.5-1 4.5-3 6H7.5C5.5 16.5 4.5 14.5 4.5 12Z"/><line x1="9" y1="9" x2="9" y2="15"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="15" y1="9" x2="15" y2="15"/></svg>
+          </div>
+          <div class="check-text">朝にタンパク質を摂取<small>Morning Protein</small></div>
+        </div>
+        <div class="check-mark"><svg viewBox="0 0 14 14" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,7 5.5,10.5 12,3.5"/></svg></div>
+      </div>
+
+      <div class="check-item" data-key="chat">
+        <div class="check-label">
+          <div class="check-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H9l-5 3V6a1 1 0 0 1 1-1Z"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="13.5" x2="13" y2="13.5"/></svg>
+          </div>
+          <div class="check-text">雑談ができた<small>Casual Talk</small></div>
+        </div>
+        <div class="check-mark"><svg viewBox="0 0 14 14" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,7 5.5,10.5 12,3.5"/></svg></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="btn-wrap">
+    <button class="btn-primary" id="btn-to-interview">次へ：初回面談へ →</button>
+  </div>
+</div>
+
+<!-- ===================== SCREEN 2: 初回面談 ===================== -->
+<div class="screen" id="screen-interview">
+  <div class="page-header">
+    <div class="page-eyebrow">Step 2 / 3</div>
+    <div class="page-title">初回面談のタスク</div>
+    <span class="page-title-bar bar-blue"></span>
+    <div class="date-chip" id="today-date-2"></div>
+  </div>
+
+  <!-- ステップ -->
+  <div class="steps">
+    <div class="step-item"><div class="step-num done">✓</div><div class="step-name done">朝のタスク</div></div>
+    <div class="step-line done"></div>
+    <div class="step-item"><div class="step-num active">2</div><div class="step-name active">初回面談</div></div>
+    <div class="step-line"></div>
+    <div class="step-item"><div class="step-num">3</div><div class="step-name">振り返り</div></div>
+  </div>
+
+  <!-- 今日の登録状況 -->
+  <div class="interview-log">
+    <div class="interview-log-header">
+      <div class="interview-log-title">本日の登録状況</div>
+      <div><span class="interview-log-count" id="log-count">0</span><span>件</span></div>
+    </div>
+    <div class="interview-log-body" id="log-body">
+      <div class="interview-log-empty">まだ記録がありません</div>
+    </div>
+  </div>
+
+  <!-- 面談フォーム -->
+  <div class="card">
+    <div class="section-label label-blue">チェックリスト</div>
+    <div class="icheck-list">
+
+      <div class="icheck-item" data-ikey="hypothesis">
+        <div class="icheck-main">
+          <div class="icheck-left">
+            <div class="icheck-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a3.5 3.5 0 0 1 6.5 1.5c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17" stroke-width="2.5"/></svg>
+            </div>
+            <div class="icheck-body">
+              <div class="icheck-title">初回面談前に仮説立てする</div>
+              <div class="icheck-desc">的外れな提案にならないようアテをつけておく</div>
+            </div>
+          </div>
+          <div class="icheck-mark"><svg viewBox="0 0 12 12" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,6 4.5,9.5 10.5,2.5"/></svg></div>
+        </div>
+      </div>
+
+      <div class="icheck-item" data-ikey="hearing">
+        <div class="icheck-main">
+          <div class="icheck-left">
+            <div class="icheck-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z"/><path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
+            </div>
+            <div class="icheck-body">
+              <div class="icheck-title">ヒアリングで現在の悩み事を聞く</div>
+              <div class="icheck-desc">アンケートと発言のズレを確認。表層の意見か深い悩みか区別する<br>→ なぜ悩んでいるのか？具体的なシーンを想像できたら OK</div>
+            </div>
+          </div>
+          <div class="icheck-mark"><svg viewBox="0 0 12 12" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,6 4.5,9.5 10.5,2.5"/></svg></div>
+        </div>
+      </div>
+
+      <div class="icheck-item" data-ikey="yes_connect">
+        <div class="icheck-main">
+          <div class="icheck-left">
+            <div class="icheck-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            </div>
+            <div class="icheck-body">
+              <div class="icheck-title">提案の方向性を変えるときは接続のYesをとる</div>
+              <div class="icheck-desc">「であれば〜」「◯◯を目指しましょう」「そのために◯◯を学びましょう」</div>
+            </div>
+          </div>
+          <div class="icheck-mark"><svg viewBox="0 0 12 12" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,6 4.5,9.5 10.5,2.5"/></svg></div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="memo-label">メモ / Memo</div>
+    <textarea class="memo-textarea" id="interview-memo" placeholder="気づいたこと・所感・次回への改善点など" rows="4"></textarea>
+  </div>
+
+  <div class="btn-wrap">
+    <button class="btn-primary blue" id="btn-save-interview">この面談を記録する</button>
+    <button class="btn-secondary" id="btn-to-reflection">振り返りへ進む →</button>
+    <button class="btn-ghost" id="btn-back-to-morning">← 朝のタスクに戻る</button>
+  </div>
+</div>
+
+<!-- ===================== SCREEN 3: 振り返り ===================== -->
+<div class="screen" id="screen-reflection">
+  <div class="page-header">
+    <div class="page-eyebrow">Step 3 / 3</div>
+    <div class="page-title">今日の振り返り</div>
+    <span class="page-title-bar bar-green"></span>
+    <div class="date-chip" id="today-date-3"></div>
+  </div>
+
+  <!-- ステップ -->
+  <div class="steps">
+    <div class="step-item"><div class="step-num done">✓</div><div class="step-name done">朝のタスク</div></div>
+    <div class="step-line done"></div>
+    <div class="step-item"><div class="step-num done">✓</div><div class="step-name done">初回面談</div></div>
+    <div class="step-line done"></div>
+    <div class="step-item"><div class="step-num active">3</div><div class="step-name active">振り返り</div></div>
+  </div>
+
+  <div class="card">
+    <div class="section-label label-green">今日の振り返りメモ</div>
+    <div class="memo-label">今日を振り返って / Daily Reflection</div>
+    <textarea class="memo-textarea large" id="reflection-memo" placeholder="今日の気づき、改善点、明日に向けてのメモなど、自由に書いてください"></textarea>
+  </div>
+
+  <div class="btn-wrap">
+    <button class="btn-primary green" id="btn-complete">記録を完了する ✓</button>
+    <button class="btn-ghost" id="btn-back-to-interview">← 初回面談に戻る</button>
+  </div>
+</div>
+
+<!-- ===================== SCREEN 4: 完了 ===================== -->
+<div class="screen" id="screen-result">
+  <div class="page-header fade-up">
+    <div class="page-eyebrow">Complete</div>
+    <div class="page-title">本日の記録</div>
+    <span class="page-title-bar bar-yellow"></span>
+    <div class="date-chip" id="result-date"></div>
+  </div>
+
+  <!-- 完了バナー -->
+  <div class="result-complete fade-up">
+    <div class="result-complete-icon">✦</div>
+    <div class="result-complete-title">記録完了</div>
+    <div class="result-complete-sub">Today's record saved</div>
+  </div>
+
+  <!-- 睡眠サマリー -->
+  <div class="summary-grid fade-up">
+    <div class="summary-cell"><div class="summary-label">就寝</div><div class="summary-value" id="r-sleep">—</div></div>
+    <div class="summary-cell"><div class="summary-label">起床</div><div class="summary-value" id="r-wake">—</div></div>
+    <div class="summary-cell"><div class="summary-label">睡眠時間</div><div class="summary-value" id="r-duration">—<span class="summary-unit">h</span></div></div>
+  </div>
+
+  <!-- 朝タスク -->
+  <div class="habit-result fade-up">
+    <div class="section-label label-red">朝のタスク</div>
+    <div class="habit-grid" id="habit-grid"></div>
+  </div>
+
+  <!-- 面談サマリー -->
+  <div class="interview-summary fade-up">
+    <div class="interview-summary-header">
+      <span>初回面談のタスク</span>
+      <div><span class="interview-summary-count" id="r-interview-count">0</span><span>件登録</span></div>
+    </div>
+    <div id="r-interview-log" style="background:var(--white)"></div>
+  </div>
+
+  <!-- 振り返り -->
+  <div class="reflection-summary fade-up">
+    <div class="section-label label-green">今日の振り返り</div>
+    <div id="r-reflection"></div>
+  </div>
+
+  <div class="btn-wrap fade-up">
+    <div class="btn-row">
+      <button class="btn-secondary" id="btn-to-history-result">面談履歴を見る</button>
+      <button class="btn-primary"   id="btn-restart">最初に戻る</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== SCREEN 5: 履歴 ===================== -->
+<div class="screen" id="screen-history">
+  <div class="history-header fade-up">
+    <div class="page-eyebrow">Interview Log</div>
+    <div class="history-title">初回面談の履歴</div>
+  </div>
+
+  <div class="history-actions fade-up">
+    <div class="history-count" id="history-count"></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn-excel" id="btn-excel">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Excelダウンロード
+      </button>
+      <button class="btn-excel" id="btn-csv" style="background:var(--accent);">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        CSVダウンロード
+      </button>
+      <button class="btn-clear" id="btn-clear-history">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+        履歴をリセット
+      </button>
+    </div>
+  </div>
+
+  <div class="history-table-wrap fade-up">
+    <table class="history-table">
+      <thead>
+        <tr>
+          <th>日付</th><th>回数</th><th>時刻</th>
+          <th>仮説立て</th><th>ヒアリング</th><th>Yes接続</th><th>メモ</th>
+        </tr>
+      </thead>
+      <tbody id="history-tbody"></tbody>
+    </table>
+  </div>
+
+  <div class="btn-wrap fade-up" style="max-width:900px;">
+    <button class="btn-secondary" id="btn-back-from-history">← メイン画面に戻る</button>
+  </div>
+</div>
+
+<script>
+// ─── 定数 ────────────────────────────
+const STORAGE_KEY = 'dmt_interview_history';
+const REFLECTION_KEY = 'dmt_reflection_history';
+
+const HABIT_INFO = {
+  stretch:  { label:'ストレッチ', svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4" r="1.5"/><line x1="12" y1="5.5" x2="12" y2="13"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="12" y1="13" x2="8" y2="20"/><line x1="12" y1="13" x2="16" y2="20"/></svg>` },
+  sparkling:{ label:'炭酸水',    svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10l-1.5 16H8.5Z"/><line x1="7" y1="8" x2="17" y2="8"/><circle cx="10" cy="12" r="0.8" fill="currentColor" stroke="none"/><circle cx="14" cy="11" r="0.8" fill="currentColor" stroke="none"/><circle cx="12" cy="14" r="0.8" fill="currentColor" stroke="none"/></svg>` },
+  protein:  { label:'タンパク質', svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12C4.5 8 7.5 5 12 5s7.5 3 7.5 7c0 2.5-1 4.5-3 6H7.5C5.5 16.5 4.5 14.5 4.5 12Z"/><line x1="9" y1="9" x2="9" y2="15"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="15" y1="9" x2="15" y2="15"/></svg>` },
+  chat:     { label:'雑談',      svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H9l-5 3V6a1 1 0 0 1 1-1Z"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="13.5" x2="13" y2="13.5"/></svg>` },
+};
+
+// ─── セッションデータ ─────────────────
+let morningData = {};
+let reflectionMemo = '';
+
+// ─── DOM ─────────────────────────────
+const $ = id => document.getElementById(id);
+const screens = {
+  morning:    $('screen-morning'),
+  interview:  $('screen-interview'),
+  reflection: $('screen-reflection'),
+  result:     $('screen-result'),
+  history:    $('screen-history'),
+};
+
+// ─── 初期化 ──────────────────────────
+function init() {
+  const { full } = getTodayStr();
+  ['today-date-1','today-date-2','today-date-3','result-date'].forEach(id => {
+    $(id).textContent = full;
+  });
+
+  // 朝タスクトグル
+  document.querySelectorAll('.check-item').forEach(el =>
+    el.addEventListener('click', () => el.classList.toggle('checked'))
+  );
+  // 面談チェックトグル
+  document.querySelectorAll('.icheck-item').forEach(el =>
+    el.addEventListener('click', () => el.classList.toggle('checked'))
+  );
+
+  // ナビゲーション
+  $('btn-to-interview').addEventListener('click',     onToInterview);
+  $('btn-save-interview').addEventListener('click',   onSaveInterview);
+  $('btn-to-reflection').addEventListener('click',    onToReflection);
+  $('btn-back-to-morning').addEventListener('click',  () => showScreen('morning'));
+  $('btn-back-to-interview').addEventListener('click',() => showScreen('interview'));
+  $('btn-complete').addEventListener('click',         onComplete);
+  $('btn-restart').addEventListener('click',          onRestart);
+  $('btn-to-history-result').addEventListener('click',() => { renderHistory(); showScreen('history'); });
+  $('btn-open-history-1').addEventListener('click',   () => { renderHistory(); showScreen('history'); });
+  $('btn-back-from-history').addEventListener('click',() => showScreen('morning'));
+  $('btn-excel').addEventListener('click',            exportExcel);
+  $('btn-csv').addEventListener('click',              exportCSV);
+  $('btn-clear-history').addEventListener('click', () => {
+    if (confirm('履歴をすべて削除しますか？')) {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(REFLECTION_KEY);
+      renderHistory();
+    }
+  });
+}
+
+// ─── 画面切り替え ────────────────────
+function showScreen(name) {
+  Object.values(screens).forEach(s => s.classList.remove('active'));
+  screens[name].classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ─── 日付 ────────────────────────────
+function getTodayStr() {
+  const now  = new Date();
+  const days = ['日','月','火','水','木','金','土'];
+  const dateStr  = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+  const full     = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日（${days[now.getDay()]}）`;
+  const dayLabel = `${now.getMonth()+1}/${now.getDate()}（${days[now.getDay()]}）`;
+  const time     = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  return { dateStr, full, dayLabel, time };
+}
+const pad = n => String(n).padStart(2,'0');
+
+// ─── Step 1→2：朝のタスク ────────────
+function onToInterview() {
+  const sleepTime = $('sleep-time').value;
+  const wakeTime  = $('wake-time').value;
+  if (!sleepTime || !wakeTime) {
+    alert('就寝時刻と起床時刻を入力してください');
+    return;
+  }
+  // 朝データ保存
+  const habits = {};
+  document.querySelectorAll('.check-item').forEach(el => {
+    habits[el.dataset.key] = el.classList.contains('checked');
+  });
+  const [sh,sm] = sleepTime.split(':').map(Number);
+  const [wh,wm] = wakeTime.split(':').map(Number);
+  let sleepMin = (wh*60+wm)-(sh*60+sm);
+  if (sleepMin < 0) sleepMin += 1440;
+  morningData = {
+    sleepTime, wakeTime,
+    sleepH: Math.floor(sleepMin/60), sleepM: sleepMin%60,
+    habits,
+  };
+  // 面談ログ更新
+  refreshInterviewLog();
+  showScreen('interview');
+}
+
+// ─── 面談を記録する ──────────────────
+function onSaveInterview() {
+  const { dateStr, dayLabel, time } = getTodayStr();
+  const history = loadHistory();
+  const sameDayCount = history.filter(r => r.dateStr === dateStr).length;
+
+  const record = {
+    dateStr, dayLabel, time,
+    seq: sameDayCount + 1,
+    hypothesis:  document.querySelector('[data-ikey="hypothesis"]').classList.contains('checked'),
+    hearing:     document.querySelector('[data-ikey="hearing"]').classList.contains('checked'),
+    yes_connect: document.querySelector('[data-ikey="yes_connect"]').classList.contains('checked'),
+    memo:        $('interview-memo').value.trim(),
+  };
+
+  history.unshift(record);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+
+  // フォームリセット
+  document.querySelectorAll('.icheck-item').forEach(el => el.classList.remove('checked'));
+  $('interview-memo').value = '';
+
+  refreshInterviewLog();
+  showToast(`${record.seq}回目の面談を記録しました`);
+}
+
+// ─── 面談ログ表示更新 ────────────────
+function refreshInterviewLog() {
+  const { dateStr } = getTodayStr();
+  const todayRecords = loadHistory().filter(r => r.dateStr === dateStr);
+
+  $('log-count').textContent = todayRecords.length;
+
+  const body = $('log-body');
+  if (todayRecords.length === 0) {
+    body.innerHTML = '<div class="interview-log-empty">まだ記録がありません</div>';
+    return;
+  }
+
+  body.innerHTML = todayRecords.map(r => `
+    <div class="interview-log-row">
+      <span class="log-seq">${r.seq}回目</span>
+      <span class="log-time">${r.time || '―'}</span>
+      <div class="log-badges">
+        <span class="log-badge ${r.hypothesis  ? 'on':'off'}">仮説立て</span>
+        <span class="log-badge ${r.hearing     ? 'on':'off'}">ヒアリング</span>
+        <span class="log-badge ${r.yes_connect ? 'on':'off'}">Yes接続</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ─── Step 2→3：振り返りへ ────────────
+function onToReflection() {
+  showScreen('reflection');
+}
+
+// ─── Step 3→完了 ─────────────────────
+function onComplete() {
+  reflectionMemo = $('reflection-memo').value.trim();
+  const { dateStr } = getTodayStr();
+  const reflections = loadReflections();
+  reflections[dateStr] = reflectionMemo;
+  localStorage.setItem(REFLECTION_KEY, JSON.stringify(reflections));
+  renderResult();
+  showScreen('result');
+}
+
+// ─── 結果画面描画 ─────────────────────
+function renderResult() {
+  const { dateStr } = getTodayStr();
+
+  // 睡眠
+  $('r-sleep').textContent = morningData.sleepTime || '—';
+  $('r-wake').textContent  = morningData.wakeTime  || '—';
+  $('r-duration').innerHTML = morningData.sleepH !== undefined
+    ? `${morningData.sleepH}<span class="summary-unit">h</span>${morningData.sleepM}<span class="summary-unit">m</span>`
+    : '—';
+
+  // 朝タスクバッジ
+  const grid = $('habit-grid');
+  grid.innerHTML = '';
+  Object.entries(HABIT_INFO).forEach(([key, info]) => {
+    const done = morningData.habits?.[key];
+    const div  = document.createElement('div');
+    div.className = 'habit-badge' + (done ? ' done' : '');
+    div.innerHTML = `<div class="hb-icon">${info.svg}</div>${info.label}${done ? '<span class="hb-mark">✔</span>' : ''}`;
+    grid.appendChild(div);
+  });
+
+  // 面談
+  const todayRecords = loadHistory().filter(r => r.dateStr === dateStr);
+  $('r-interview-count').textContent = todayRecords.length;
+  $('r-interview-log').innerHTML = todayRecords.length === 0
+    ? '<div style="padding:14px 20px;font-size:11px;color:var(--text-3);font-weight:600;letter-spacing:1px;">本日の面談記録なし</div>'
+    : todayRecords.map(r => `
+        <div class="interview-log-row">
+          <span class="log-seq">${r.seq}回目</span>
+          <span class="log-time">${r.time || '―'}</span>
+          <div class="log-badges">
+            <span class="log-badge ${r.hypothesis  ? 'on':'off'}">仮説立て</span>
+            <span class="log-badge ${r.hearing     ? 'on':'off'}">ヒアリング</span>
+            <span class="log-badge ${r.yes_connect ? 'on':'off'}">Yes接続</span>
+          </div>
+        </div>`).join('');
+
+  // 振り返り
+  $('r-reflection').innerHTML = reflectionMemo
+    ? `<div class="reflection-text">${escHtml(reflectionMemo)}</div>`
+    : '<div class="reflection-empty">メモなし</div>';
+}
+
+// ─── 最初に戻る ──────────────────────
+function onRestart() {
+  // 朝タスクリセット
+  document.querySelectorAll('.check-item').forEach(el => el.classList.remove('checked'));
+  document.querySelectorAll('.icheck-item').forEach(el => el.classList.remove('checked'));
+  $('interview-memo').value = '';
+  $('reflection-memo').value = '';
+  morningData = {};
+  reflectionMemo = '';
+  showScreen('morning');
+}
+
+// ─── localStorage ────────────────────
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch { return []; }
+}
+function loadReflections() {
+  try { return JSON.parse(localStorage.getItem(REFLECTION_KEY)) || {}; }
+  catch { return {}; }
+}
+
+// ─── 履歴テーブル描画 ────────────────
+function renderHistory() {
+  const history = loadHistory();
+  const dayCount = {};
+  history.forEach(r => { dayCount[r.dateStr] = (dayCount[r.dateStr]||0)+1; });
+  $('history-count').textContent = `${Object.keys(dayCount).length}日・計${history.length}件の記録`;
+
+  const tbody = $('history-tbody');
+  if (history.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="history-empty">面談の記録がありません</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = history.map(r => `
+    <tr>
+      <td>${r.dayLabel}<br><span class="badge-seq">${r.seq || '―'}回目</span></td>
+      <td style="font-size:12px;font-weight:600;">${r.time||'―'}</td>
+      <td>${r.seq||'―'}</td>
+      <td>${r.hypothesis  ? '<span class="badge-done">✔</span>' : '<span class="badge-none">―</span>'}</td>
+      <td>${r.hearing     ? '<span class="badge-done">✔</span>' : '<span class="badge-none">―</span>'}</td>
+      <td>${r.yes_connect ? '<span class="badge-done">✔</span>' : '<span class="badge-none">―</span>'}</td>
+      <td class="td-memo">${escHtml(r.memo)||'<span style="color:var(--text-3)">—</span>'}</td>
+    </tr>`).join('');
+}
+
+// ─── Excel エクスポート ───────────────
+function exportExcel() {
+  const history = loadHistory();
+  if (!history.length) { alert('エクスポートする履歴がありません'); return; }
+
+  const rows = [
+    ['日付','回数','時刻','仮説立て','ヒアリング','Yes接続','メモ'],
+    ...history.map(r => [
+      r.dayLabel, r.seq ? `${r.seq}回目` : '―', r.time||'―',
+      r.hypothesis  ? '✔':'―',
+      r.hearing     ? '✔':'―',
+      r.yes_connect ? '✔':'―',
+      r.memo||'',
+    ])
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{wch:16},{wch:8},{wch:8},{wch:12},{wch:14},{wch:12},{wch:40}];
+
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for (let c = range.s.c; c <= range.e.c; c++) {
+    const addr = XLSX.utils.encode_cell({r:0,c});
+    if (ws[addr]) ws[addr].s = { fill:{fgColor:{rgb:'111111'}}, font:{color:{rgb:'FFFFFF'},bold:true}, alignment:{horizontal:'center'} };
+  }
+  for (let r = 1; r < rows.length; r++) {
+    for (let c = 3; c <= 5; c++) {
+      const addr = XLSX.utils.encode_cell({r,c});
+      if (ws[addr]?.v === '✔') ws[addr].s = { fill:{fgColor:{rgb:'E8EDFF'}}, font:{color:{rgb:'1A4CFF'},bold:true}, alignment:{horizontal:'center'} };
+    }
+  }
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '初回面談履歴');
+  const now = new Date();
+  XLSX.writeFile(wb, `面談履歴_${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}.xlsx`);
+}
+
+// ─── CSV エクスポート ─────────────────
+function exportCSV() {
+  const history = loadHistory();
+  if (!history.length) { alert('エクスポートする履歴がありません'); return; }
+
+  const reflections = loadReflections();
+  const headers = ['日付','回数','時刻','仮説立て','ヒアリング','Yes接続','面談メモ','振り返りメモ'];
+  const rows = history.map(r => [
+    r.dayLabel,
+    r.seq ? `${r.seq}回目` : '―',
+    r.time || '―',
+    r.hypothesis  ? '✔' : '―',
+    r.hearing     ? '✔' : '―',
+    r.yes_connect ? '✔' : '―',
+    r.memo || '',
+    reflections[r.dateStr] || '',
+  ]);
+
+  const csv = [headers, ...rows]
+    .map(row => row.map(cell => `"${String(cell).replace(/"/g,'""')}"`).join(','))
+    .join('\n');
+
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const now = new Date();
+  a.download = `面談履歴_${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─── トースト ────────────────────────
+function showToast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ─── ユーティリティ ───────────────────
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+
+init();
+</script>
+</body>
+</html>

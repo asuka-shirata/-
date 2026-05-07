@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>タスクボード</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 48px 16px;
+    }
+
+    #root {
+      width: 100%;
+      max-width: 560px;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState } = React;
+
+    function TaskBoard() {
+      const [tasks, setTasks] = useState([
+        { id: 1, text: "Claude Code の使い方を学ぶ", done: true },
+        { id: 2, text: "タスクボードアプリを完成させる", done: false },
+      ]);
+      const [input, setInput] = useState("");
+
+      function addTask() {
+        const text = input.trim();
+        if (!text) return;
+        setTasks([...tasks, { id: Date.now(), text, done: false }]);
+        setInput("");
+      }
+
+      function toggleTask(id) {
+        setTasks(tasks.map(t => t.id === id ? { ...t, done: !t.done } : t));
+      }
+
+      function deleteTask(id) {
+        setTasks(tasks.filter(t => t.id !== id));
+      }
+
+      function handleKeyDown(e) {
+        if (e.key === "Enter") addTask();
+      }
+
+      const remaining = tasks.filter(t => !t.done).length;
+
+      return (
+        <div style={styles.card}>
+          <h1 style={styles.heading}>タスクボード</h1>
+          <p style={styles.counter}>
+            残り <strong>{remaining}</strong> / {tasks.length} 件
+          </p>
+
+          {/* 入力欄 */}
+          <div style={styles.inputRow}>
+            <input
+              style={styles.input}
+              type="text"
+              placeholder="新しいタスクを入力..."
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+            />
+            <button style={styles.addBtn} onClick={addTask}>追加</button>
+          </div>
+
+          {/* タスク一覧 */}
+          <ul style={styles.list}>
+            {tasks.length === 0 && (
+              <li style={styles.empty}>タスクがありません</li>
+            )}
+            {tasks.map(task => (
+              <li key={task.id} style={styles.item}>
+                <label style={styles.label}>
+                  <input
+                    type="checkbox"
+                    checked={task.done}
+                    onChange={() => toggleTask(task.id)}
+                    style={styles.checkbox}
+                  />
+                  <span style={{ ...styles.taskText, ...(task.done ? styles.done : {}) }}>
+                    {task.text}
+                  </span>
+                </label>
+                <button
+                  style={styles.deleteBtn}
+                  onClick={() => deleteTask(task.id)}
+                  title="削除"
+                >
+                  ✕
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      );
+    }
+
+    const styles = {
+      card: {
+        background: "#fff",
+        borderRadius: "16px",
+        padding: "32px",
+        boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
+      },
+      heading: {
+        fontSize: "24px",
+        fontWeight: "700",
+        color: "#1a202c",
+        marginBottom: "4px",
+      },
+      counter: {
+        fontSize: "14px",
+        color: "#718096",
+        marginBottom: "24px",
+      },
+      inputRow: {
+        display: "flex",
+        gap: "8px",
+        marginBottom: "24px",
+      },
+      input: {
+        flex: 1,
+        padding: "10px 14px",
+        fontSize: "15px",
+        border: "1px solid #e2e8f0",
+        borderRadius: "8px",
+        outline: "none",
+        color: "#2d3748",
+      },
+      addBtn: {
+        padding: "10px 20px",
+        fontSize: "15px",
+        fontWeight: "600",
+        background: "#4f46e5",
+        color: "#fff",
+        border: "none",
+        borderRadius: "8px",
+        cursor: "pointer",
+        whiteSpace: "nowrap",
+      },
+      list: {
+        listStyle: "none",
+        display: "flex",
+        flexDirection: "column",
+        gap: "8px",
+      },
+      item: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "12px 14px",
+        background: "#f7fafc",
+        borderRadius: "8px",
+        border: "1px solid #e2e8f0",
+      },
+      label: {
+        display: "flex",
+        alignItems: "center",
+        gap: "12px",
+        cursor: "pointer",
+        flex: 1,
+        minWidth: 0,
+      },
+      checkbox: {
+        width: "18px",
+        height: "18px",
+        cursor: "pointer",
+        accentColor: "#4f46e5",
+        flexShrink: 0,
+      },
+      taskText: {
+        fontSize: "15px",
+        color: "#2d3748",
+        wordBreak: "break-word",
+      },
+      done: {
+        color: "#a0aec0",
+        textDecoration: "line-through",
+      },
+      deleteBtn: {
+        background: "none",
+        border: "none",
+        color: "#cbd5e0",
+        fontSize: "16px",
+        cursor: "pointer",
+        padding: "4px 8px",
+        borderRadius: "4px",
+        flexShrink: 0,
+        lineHeight: 1,
+      },
+      empty: {
+        textAlign: "center",
+        color: "#a0aec0",
+        padding: "32px 0",
+        fontSize: "14px",
+      },
+    };
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<TaskBoard />);
+  </script>
+</body>
+</html>

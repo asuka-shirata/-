@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CATCHUP DASHBOARD</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;900&display=swap" rel="stylesheet" />
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { font-size: 16px; }
+    body { font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
+    ::-webkit-scrollbar { width: 3px; height: 3px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 2px; }
+    input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.5; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    /* ─── DATA ────────────────────────────────────────────────────── */
+    const CATEGORIES = [
+      { id:"hongyou-ai",  label:"生成AI / ClaudeCode",   color:"#2563EB", bg:"#EFF6FF", type:"hongyou" },
+      { id:"hongyou-edu", label:"プログラミング教育",       color:"#7C3AED", bg:"#F5F3FF", type:"hongyou" },
+      { id:"fuku-career", label:"IT転職市場",              color:"#059669", bg:"#ECFDF5", type:"fuku"    },
+      { id:"fuku-sales",  label:"セールス/マーケ転職",      color:"#0891B2", bg:"#ECFEFF", type:"fuku"    },
+      { id:"common",      label:"業界全般",                color:"#D97706", bg:"#FFFBEB", type:"common"  },
+    ];
+
+    const TYPE_LABELS = { hongyou:"本業", fuku:"副業", common:"共通" };
+    const TYPE_COLORS = { hongyou:"#2563EB", fuku:"#059669", common:"#D97706" };
+
+    const SOURCES = [
+      { id:"pivot",    name:"PIVOT",            query:"PIVOT YouTube 最新ニュース",       catId:"common",       desc:"ビジネス・経済" },
+      { id:"yasuno",   name:"安野貴博の自由研究", query:"安野貴博 自由研究 AI 最新",       catId:"hongyou-ai",   desc:"AI・テクノロジー" },
+      { id:"shigoto",  name:"しごとリーチ",      query:"しごとリーチ IT転職 最新",         catId:"fuku-career",  desc:"IT転職・求人" },
+      { id:"salatame", name:"転職のサラタメさん", query:"サラタメ 転職 キャリア 最新",      catId:"fuku-sales",   desc:"転職・キャリア" },
+    ];
+
+    /* ─── UTILS ───────────────────────────────────────────────────── */
+    function getTodayString() {
+      const D = ["日","月","火","水","木","金","土"];
+      const d = new Date();
+      return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,"0")}.${String(d.getDate()).padStart(2,"0")}（${D[d.getDay()]}）`;
+    }
+
+    function fmtDate(iso) {
+      if (!iso) return "";
+      const d = new Date(iso);
+      return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,"0")}.${String(d.getDate()).padStart(2,"0")}`;
+    }
+
+    function fmtDigestDate() {
+      const d = new Date();
+      return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,"0")}/${String(d.getDate()).padStart(2,"0")}`;
+    }
+
+    function todayISO() {
+      return new Date().toISOString().slice(0,10);
+    }
+
+    /* ─── DESIGN TOKENS ──────────────────────────────────────────── */
+    const ACCENT = "#D4272A";
+
+    function cssVars(dark) {
+      return dark ? {
+        "--bg":      "#111111",
+        "--surface": "#1C1C1C",
+        "--border":  "#2E2E2E",
+        "--text":    "#F0EFEB",
+        "--muted":   "#777777",
+        "--hbg":     "#000000",
+      } : {
+        "--bg":      "#F5F4F0",
+        "--surface": "#FFFFFF",
+        "--border":  "#E2E1DC",
+        "--text":    "#111111",
+        "--muted":   "#888888",
+        "--hbg":     "#111111",
+      };
+    }
+
+    /* shared style atoms */
+    const OVERLAY = { position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:200, padding:16 };
+    const MODAL   = (w=460) => ({ background:"var(--surface)", borderRadius:0, padding:28, width:"100%", maxWidth:w, boxShadow:"0 12px 48px rgba(0,0,0,0.22)", borderTop:`4px solid ${ACCENT}` });
+    const INPUT   = { padding:"10px 12px", border:"1px solid var(--border)", background:"var(--bg)", color:"var(--text)", fontSize:13, outline:"none", width:"100%", boxSizing:"border-box", borderRadius:0, fontFamily:"inherit" };
+    const BTN_P   = { padding:"10px 18px", border:"none", background:ACCENT, color:"#FFF", fontWeight:700, fontSize:13, cursor:"pointer", letterSpacing:"0.03em", borderRadius:0 };
+    const BTN_G   = { padding:"8px 14px", border:"1px solid var(--border)", background:"none", color:"var(--text)", fontSize:12, cursor:"pointer", borderRadius:0, fontFamily:"inherit" };
+    const LABEL   = { display:"block", fontSize:10, fontWeight:700, color:"var(--muted)", marginBottom:5, letterSpacing:"0.08em", textTransform:"uppercase" };
+    const HINT    = { fontSize:11, color:"var(--muted)", lineHeight:1.6 };
+
+    /* ─── MODAL HEADER ────────────────────────────────────────────── */
+    function MH({ title, onClose }) {
+      return (
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:22 }}>
+          <span style={{ fontWeight:900, fontSize:15, letterSpacing:"-0.01em" }}>{title}</span>
+          <button onClick={onClose} style={{ background:"none", border:"none", cursor:"pointer", fontSize:22, color:"var(--muted)", lineHeight:1, padding:"0 2px" }}>×</button>
+        </div>
+      );
+    }
+
+    /* ─── SETTINGS MODAL ─────────────────────────────────────────── */
+    function SettingsModal({ settings, onSave, onClose }) {
+      const [apiKey,  setApiKey]  = useState(settings.apiKey  || "");
+      const [webhook, setWebhook] = useState(settings.slackWebhook || "");
+      const [showKey, setShowKey] = useState(false);
+      return (
+        <div style={OVERLAY}>
+          <div style={MODAL(480)}>
+            <MH title="⚙️  SETTINGS" onClose={onClose} />
+            <label style={LABEL}>Anthropic API Key — AI 検索機能に使用</label>
+            <div style={{ display:"flex", gap:6, marginBottom:6 }}>
+              <input type={showKey?"text":"password"} value={apiKey} onChange={e=>setApiKey(e.target.value)}
+                placeholder="sk-ant-..." style={{ ...INPUT, flex:1 }} />
+              <button onClick={()=>setShowKey(v=>!v)} style={{ ...BTN_G, whiteSpace:"nowrap" }}>{showKey?"隠す":"表示"}</button>
+            </div>
+            <p style={{ ...HINT, marginBottom:20 }}>
+              <a href="https://console.anthropic.com" target="_blank" rel="noreferrer" style={{ color:ACCENT }}>console.anthropic.com</a> で取得できます
+            </p>
+
+            <label style={LABEL}>Slack Incoming Webhook URL</label>
+            <input type="text" value={webhook} onChange={e=>setWebhook(e.target.value)}
+              placeholder="https://hooks.slack.com/services/..." style={{ ...INPUT, marginBottom:6 }} />
+            <p style={{ ...HINT, marginBottom:24 }}>
+              Slackワークスペースで Incoming Webhook App を作成してURLを貼り付けてください
+            </p>
+
+            <button onClick={()=>{ onSave({ apiKey:apiKey.trim(), slackWebhook:webhook.trim() }); onClose(); }}
+              style={{ ...BTN_P, width:"100%" }}>
+              保存する
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    /* ─── SLACK SINGLE POST ──────────────────────────────────────── */
+    function SlackPreview({ item, slackWebhook, onClose, onPost }) {
+      const cat = CATEGORIES.find(c=>c.id===item.categoryId);
+      const text = `📌 *${item.title}*\n${item.url}${item.publishedAt?`\n📅 公開: ${fmtDate(item.publishedAt)}`:""}${item.memo?`\n💬 ${item.memo}`:""}${cat?`\n#${cat.label.replace(/\s/g,"")}`:""}`;
+      const [posting, setPosting] = useState(false);
+      const [done, setDone]       = useState(false);
+      const [err,  setErr]        = useState("");
+      async function go() {
+        if (!slackWebhook) { setErr("設定からSlack Webhook URLを入力してください"); return; }
+        setPosting(true); setErr("");
+        try {
+          const r = await fetch("/api/slack",{ method:"POST", headers:{"Content-Type":"application/json"},
+            body: JSON.stringify({ _webhookUrl:slackWebhook, text }) });
+          const d = await r.json();
+          if (d.ok) { setDone(true); setTimeout(()=>{ onPost(); onClose(); }, 800); }
+          else setErr(d.error||"投稿に失敗しました");
+        } catch(e){ setErr(e.message); }
+        setPosting(false);
+      }
+      return (
+        <div style={OVERLAY}>
+          <div style={MODAL(420)}>
+            <MH title="SLACK に投稿" onClose={onClose} />
+            <div style={{ background:"var(--bg)", padding:"12px 14px", fontFamily:"monospace", fontSize:12, whiteSpace:"pre-wrap", lineHeight:1.8, marginBottom:16, border:"1px solid var(--border)", color:"var(--text)" }}>
+              {text}
+            </div>
+            {!slackWebhook && <p style={{ fontSize:12, color:"#D97706", marginBottom:12 }}>⚠️ Webhook URLが未設定です（⚙️ 設定から入力）</p>}
+            {err && <p style={{ fontSize:12, color:ACCENT, marginBottom:10 }}>{err}</p>}
+            <button onClick={go} disabled={posting||done}
+              style={{ ...BTN_P, width:"100%", background: done?"#059669": posting?"#93C5FD": ACCENT }}>
+              {done?"✓ 投稿しました": posting?"投稿中...":"投稿する"}
+            </button>
+            <p style={{ ...HINT, marginTop:8, textAlign:"center" }}>投稿先はWebhookで設定済みのチャンネルになります</p>
+          </div>
+        </div>
+      );
+    }
+
+    /* ─── BATCH SLACK POST ───────────────────────────────────────── */
+    function BatchSlackModal({ items, slackWebhook, onClose, onDone }) {
+      const cands = items.filter(i=>i.memo&&i.memo.trim()&&!i.slackPosted);
+      const [sel, setSel]   = useState(new Set(cands.map(i=>i.id)));
+      const [posting, setPosting] = useState(false);
+      const [done, setDone]       = useState(false);
+      const [err, setErr]         = useState("");
+      const [prev, setPrev]       = useState(false);
+
+      function tog(id){ setSel(s=>{ const ns=new Set(s); ns.has(id)?ns.delete(id):ns.add(id); return ns; }); }
+
+      function buildMsg() {
+        const chosen = cands.filter(i=>sel.has(i.id));
+        const grp = {};
+        chosen.forEach(item=>{
+          const cat = CATEGORIES.find(c=>c.id===item.categoryId);
+          const k = cat?cat.label:"その他";
+          if (!grp[k]) grp[k]=[];
+          grp[k].push(item);
+        });
+        const lines = [`📚 *キャッチアップ報告 — ${fmtDigestDate()}*`, ""];
+        Object.entries(grp).forEach(([lbl,its])=>{
+          lines.push(`【${lbl}】`);
+          its.forEach(item=>{
+            lines.push(`• *${item.title}*`);
+            lines.push(`  ${item.url}`);
+            if (item.publishedAt) lines.push(`  📅 ${fmtDate(item.publishedAt)}`);
+            if (item.memo) lines.push(`  → ${item.memo}`);
+          });
+          lines.push("");
+        });
+        return lines.join("\n").trim();
+      }
+
+      async function go() {
+        if (!slackWebhook) { setErr("設定からSlack Webhook URLを入力してください"); return; }
+        if (sel.size===0) return;
+        setPosting(true); setErr("");
+        try {
+          const r = await fetch("/api/slack",{ method:"POST", headers:{"Content-Type":"application/json"},
+            body: JSON.stringify({ _webhookUrl:slackWebhook, text:buildMsg() }) });
+          const d = await r.json();
+          if (d.ok) { setDone(true); setTimeout(()=>{ onDone(Array.from(sel)); onClose(); }, 900); }
+          else setErr(d.error||"投稿に失敗しました");
+        } catch(e){ setErr(e.message); }
+        setPosting(false);
+      }
+
+      if (cands.length===0) return (
+        <div style={OVERLAY}>
+          <div style={{ ...MODAL(380), textAlign:"center" }}>
+            <MH title="まとめて投稿" onClose={onClose} />
+            <div style={{ fontSize:36, marginBottom:12 }}>📭</div>
+            <p style={{ ...HINT, marginBottom:20 }}>メモ済みで未投稿のコンテンツがありません</p>
+            <button onClick={onClose} style={{ ...BTN_P, width:"100%" }}>閉じる</button>
+          </div>
+        </div>
+      );
+
+      return (
+        <div style={OVERLAY}>
+          <div style={{ ...MODAL(540), maxHeight:"90vh", overflowY:"auto" }}>
+            <MH title={`まとめて SLACK 投稿（${cands.length}件）`} onClose={onClose} />
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+              <span style={{ fontSize:11, color:"var(--muted)" }}>投稿したい項目を選択してください</span>
+              <button onClick={()=>setSel(sel.size===cands.length?new Set():new Set(cands.map(i=>i.id)))} style={BTN_G}>
+                {sel.size===cands.length?"全解除":"全選択"}
+              </button>
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:5, marginBottom:14 }}>
+              {cands.map(item=>{
+                const cat = CATEGORIES.find(c=>c.id===item.categoryId);
+                const chk = sel.has(item.id);
+                return (
+                  <div key={item.id} onClick={()=>tog(item.id)}
+                    style={{ display:"flex", gap:10, padding:"10px 12px", border:`1px solid ${chk?"#2563EB":"var(--border)"}`, background: chk?"#EFF6FF":"var(--bg)", cursor:"pointer", transition:"all .12s", borderLeft: chk?`4px solid #2563EB`:"4px solid transparent" }}>
+                    <div style={{ width:16, height:16, border:`2px solid ${chk?"#2563EB":"var(--border)"}`, background: chk?"#2563EB":"none", flexShrink:0, marginTop:2, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                      {chk&&<span style={{ color:"#FFF", fontSize:9 }}>✓</span>}
+                    </div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      {cat&&<span style={{ fontSize:9, padding:"1px 6px", background:cat.color, color:"#FFF", fontWeight:700, letterSpacing:"0.05em", marginBottom:3, display:"inline-block" }}>{cat.label}</span>}
+                      <div style={{ fontSize:12, fontWeight:700, color:"var(--text)", marginBottom:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item.title}</div>
+                      <div style={{ fontSize:10, color:"#2563EB", marginBottom: item.memo?2:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item.url}</div>
+                      {item.memo&&<div style={{ fontSize:11, color:"var(--muted)" }}>→ {item.memo}</div>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <button onClick={()=>setPrev(v=>!v)} style={{ ...BTN_G, width:"100%", marginBottom:10 }}>
+              {prev?"プレビューを隠す":"Slackメッセージをプレビュー"}
+            </button>
+            {prev&&(
+              <div style={{ background:"var(--bg)", padding:"12px 14px", fontFamily:"monospace", fontSize:11, whiteSpace:"pre-wrap", lineHeight:1.8, marginBottom:12, border:"1px solid var(--border)", color:"var(--text)", maxHeight:200, overflowY:"auto" }}>
+                {buildMsg()}
+              </div>
+            )}
+            {!slackWebhook&&<p style={{ fontSize:12, color:"#D97706", marginBottom:10 }}>⚠️ Webhook URLが未設定です（⚙️ 設定から入力）</p>}
+            {err&&<p style={{ fontSize:12, color:ACCENT, marginBottom:10 }}>{err}</p>}
+            <button onClick={go} disabled={sel.size===0||posting||done}
+              style={{ ...BTN_P, width:"100%", background: done?"#059669": posting?"#93C5FD": sel.size>0?ACCENT:"var(--border)", color: done||posting||sel.size>0?"#FFF":"var(--muted)" }}>
+              {done?"✓ 投稿しました": posting?"投稿中...": sel.size>0?`${sel.size}件をSlackに投稿`:"項目を選択してください"}
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    /* ─── CONTENT CARD ───────────────────────────────────────────── */
+    function ContentCard({ item, onUpdate, onSlack }) {
+      const cat = CATEGORIES.find(c=>c.id===item.categoryId);
+      const [editing, setEditing] = useState(false);
+      const [memo, setMemo]       = useState(item.memo||"");
+
+      return (
+        <div style={{
+          background:"var(--surface)",
+          borderLeft:`4px solid ${cat?cat.color:"var(--border)"}`,
+          borderBottom:"1px solid var(--border)",
+          borderRight:"1px solid var(--border)",
+          borderTop:"1px solid var(--border)",
+          padding:"14px 16px 12px",
+          transition:"opacity .2s",
+          opacity: item.read ? 0.55 : 1,
+        }}>
+          <div style={{ display:"flex", gap:10, alignItems:"flex-start" }}>
+            {item.thumbnail&&(
+              <img src={item.thumbnail} alt="" style={{ width:80, height:56, objectFit:"cover", flexShrink:0, borderRadius:0, background:"var(--bg)" }}
+                onError={e=>{e.target.style.display="none";}} />
+            )}
+            <div style={{ flex:1, minWidth:0 }}>
+              {/* badges */}
+              <div style={{ display:"flex", flexWrap:"wrap", gap:5, alignItems:"center", marginBottom:5 }}>
+                {cat&&<span style={{ fontSize:9, fontWeight:700, padding:"2px 6px", background:cat.color, color:"#FFF", letterSpacing:"0.06em", textTransform:"uppercase" }}>{cat.label}</span>}
+                {item.source&&<span style={{ fontSize:10, color:"var(--muted)" }}>{item.source}</span>}
+                {item.slackPosted&&<span style={{ fontSize:9, color:"#059669", fontWeight:700, letterSpacing:"0.05em" }}>✓ SLACK済</span>}
+                <span style={{ fontSize:10, color:"var(--muted)", marginLeft:"auto" }}>
+                  {item.publishedAt ? `公開 ${fmtDate(item.publishedAt)}` : `追加 ${fmtDate(item.addedAt)}`}
+                </span>
+              </div>
+              {/* title */}
+              <a href={item.url} target="_blank" rel="noreferrer"
+                style={{ fontSize:13, fontWeight:700, color:"var(--text)", textDecoration:"none", lineHeight:1.45, display:"block", marginBottom:4, letterSpacing:"-0.01em" }}>
+                {item.title}
+              </a>
+              {/* description */}
+              {item.description&&(
+                <p style={{ fontSize:11, color:"var(--muted)", lineHeight:1.55, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden" }}>
+                  {item.description}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* memo */}
+          {editing ? (
+            <div style={{ marginTop:10 }}>
+              <textarea value={memo} onChange={e=>setMemo(e.target.value)} placeholder="メモを入力..." rows={2} autoFocus
+                style={{ width:"100%", padding:"8px 10px", border:"1px solid var(--border)", borderLeft:`3px solid ${ACCENT}`, background:"var(--bg)", color:"var(--text)", fontSize:12, resize:"vertical", outline:"none", fontFamily:"inherit", boxSizing:"border-box" }} />
+              <div style={{ display:"flex", gap:6, marginTop:6 }}>
+                <button onClick={()=>{ onUpdate({...item,memo}); setEditing(false); }} style={{ ...BTN_P, fontSize:12, padding:"5px 14px" }}>保存</button>
+                <button onClick={()=>{ setMemo(item.memo||""); setEditing(false); }} style={{ ...BTN_G, fontSize:12 }}>キャンセル</button>
+              </div>
+            </div>
+          ) : item.memo ? (
+            <div onClick={()=>setEditing(true)} style={{ marginTop:8, padding:"7px 10px", background:"var(--bg)", fontSize:11, color:"var(--text)", cursor:"pointer", lineHeight:1.6, borderLeft:`3px solid ${ACCENT}` }}>
+              💬 {item.memo}
+            </div>
+          ) : null}
+
+          {/* actions */}
+          <div style={{ display:"flex", gap:6, marginTop:10, flexWrap:"wrap" }}>
+            <button onClick={()=>onUpdate({...item,read:!item.read})}
+              style={{ padding:"5px 11px", border:`1px solid ${item.read?"var(--border)":ACCENT}`, background: item.read?"var(--bg)":ACCENT, color: item.read?"var(--muted)":"#FFF", fontSize:10, cursor:"pointer", fontWeight:700, letterSpacing:"0.04em" }}>
+              {item.read?"✓ 既読":"既読にする"}
+            </button>
+            <button onClick={()=>setEditing(true)}
+              style={{ padding:"5px 11px", border:"1px solid var(--border)", background:"none", color:"var(--text)", fontSize:10, cursor:"pointer", letterSpacing:"0.04em" }}>
+              {item.memo?"メモ編集":"メモ追加"}
+            </button>
+            <button onClick={()=>onSlack(item)}
+              style={{ padding:"5px 11px", border:"1px solid #4ADE80", background:"none", color: item.slackPosted?"var(--muted)":"#059669", fontSize:10, cursor:"pointer", fontWeight:700, marginLeft:"auto", letterSpacing:"0.04em" }}>
+              {item.slackPosted?"再投稿":"Slack投稿"}
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    /* ─── ADD MODAL ──────────────────────────────────────────────── */
+    function AddModal({ onClose, onAdd }) {
+      const [url, setUrl]           = useState("");
+      const [title, setTitle]       = useState("");
+      const [desc, setDesc]         = useState("");
+      const [thumb, setThumb]       = useState("");
+      const [src, setSrc]           = useState("");
+      const [pubDate, setPubDate]   = useState("");
+      const [catId, setCatId]       = useState(CATEGORIES[0].id);
+      const [loading, setLoading]   = useState(false);
+      const [fetched, setFetched]   = useState(false);
+      const [fetchErr, setFetchErr] = useState("");
+
+      async function fetchMeta() {
+        if (!url.trim()) return;
+        setLoading(true); setFetchErr("");
+        try {
+          const fullUrl = url.startsWith("http") ? url : "https://"+url;
+          const r = await fetch("/api/meta?url="+encodeURIComponent(fullUrl));
+          const d = await r.json();
+          if (d.error) setFetchErr(d.error);
+          else {
+            if (d.title)       setTitle(d.title);
+            if (d.description) setDesc(d.description);
+            if (d.image)       setThumb(d.image);
+            if (d.source)      setSrc(d.source);
+            setFetched(true);
+          }
+        } catch(e){ setFetchErr(e.message); }
+        setLoading(false);
+      }
+
+      function doAdd() {
+        if (!title.trim()||!url.trim()) return;
+        const fullUrl = url.startsWith("http") ? url : "https://"+url;
+        const source = src || (url.includes("youtube")||url.includes("youtu.be")?"YouTube":
+          url.includes("x.com")||url.includes("twitter")?"X":
+          (() => { try { return new URL(fullUrl).hostname.replace("www.",""); } catch{ return ""; } })());
+        onAdd({ id:Date.now().toString(), url:fullUrl, title, description:desc, source, thumbnail:thumb,
+          publishedAt:pubDate||null, categoryId:catId, read:false, memo:"", slackPosted:false,
+          addedAt:new Date().toISOString() });
+        onClose();
+      }
+
+      return (
+        <div style={OVERLAY}>
+          <div style={MODAL(460)}>
+            <MH title="コンテンツを追加" onClose={onClose} />
+            <label style={LABEL}>URL</label>
+            <div style={{ display:"flex", gap:6, marginBottom: fetchErr?4:14 }}>
+              <input value={url} onChange={e=>{ setUrl(e.target.value); setFetched(false); setFetchErr(""); }}
+                onKeyDown={e=>e.key==="Enter"&&fetchMeta()} placeholder="https://..." style={{ ...INPUT, flex:1 }} />
+              <button onClick={fetchMeta} disabled={!url.trim()||loading}
+                style={{ ...BTN_P, opacity:!url.trim()?0.5:1, whiteSpace:"nowrap" }}>
+                {loading?"取得中":"取得"}
+              </button>
+            </div>
+            {fetchErr&&<p style={{ fontSize:11, color:ACCENT, marginBottom:10 }}>{fetchErr}</p>}
+
+            {fetched&&thumb&&(
+              <img src={thumb} alt="" onError={e=>e.target.style.display="none"}
+                style={{ width:"100%", height:100, objectFit:"cover", marginBottom:12, background:"var(--bg)" }} />
+            )}
+
+            <label style={LABEL}>タイトル</label>
+            <input value={title} onChange={e=>setTitle(e.target.value)} placeholder="タイトルを入力"
+              style={{ ...INPUT, marginBottom:14 }} />
+
+            <label style={LABEL}>公開日（任意）</label>
+            <input type="date" value={pubDate} onChange={e=>setPubDate(e.target.value)}
+              style={{ ...INPUT, marginBottom:14 }} />
+
+            <label style={LABEL}>カテゴリ</label>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:20 }}>
+              {CATEGORIES.map(c=>(
+                <button key={c.id} onClick={()=>setCatId(c.id)}
+                  style={{ padding:"5px 11px", border:`1px solid ${catId===c.id?c.color:"var(--border)"}`, background: catId===c.id?c.color:"none", color: catId===c.id?"#FFF":"var(--muted)", fontSize:11, cursor:"pointer", fontWeight: catId===c.id?700:400, letterSpacing:"0.02em", borderRadius:0 }}>
+                  {c.label}
+                </button>
+              ))}
+            </div>
+
+            <button onClick={doAdd} disabled={!title.trim()||!url.trim()}
+              style={{ ...BTN_P, width:"100%", opacity: title.trim()&&url.trim()?1:0.4 }}>
+              追加する
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    /* ─── SEARCH MODAL ───────────────────────────────────────────── */
+    function SearchModal({ apiKey, defaultKeyword="", onClose, onAdd }) {
+      const [kw, setKw]           = useState(defaultKeyword);
+      const [catId, setCatId]     = useState(CATEGORIES[0].id);
+      const [results, setResults] = useState([]);
+      const [loading, setLoading] = useState(false);
+      const [sel, setSel]         = useState(new Set());
+      const [err, setErr]         = useState("");
+
+      useEffect(()=>{ if (defaultKeyword) doSearch(defaultKeyword); },[]);
+
+      async function doSearch(query) {
+        const q = query||kw;
+        if (!q.trim()) return;
+        if (!apiKey) { setErr("⚙️ 設定からAnthropic APIキーを入力してください"); return; }
+        setLoading(true); setResults([]); setErr("");
+        try {
+          const r = await fetch("/api/proxy/anthropic",{
+            method:"POST", headers:{"Content-Type":"application/json"},
+            body: JSON.stringify({
+              _apiKey: apiKey,
+              model:"claude-sonnet-4-6",
+              max_tokens:1500,
+              tools:[{ type:"web_search_20250305", name:"web_search" }],
+              system:`あなたはニュース・動画収集アシスタントです。キーワードで検索し、関連性の高い記事・動画を5件見つけて、必ずJSONのみで返してください。フォーマット:
+[{"title":"タイトル","url":"URL","description":"概要（50字以内）","source":"ソース名","publishedAt":"YYYY-MM-DD または null"}]
+preambleもmarkdownも不要。JSONのみ。日付不明の場合はnull。`,
+              messages:[{ role:"user", content:`「${q}」で最新の記事・YouTube動画を5件検索してJSON形式で返してください。` }],
+            }),
+          });
+          const data = await r.json();
+          if (data.error) { setErr(data.error); setLoading(false); return; }
+          const txt = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+          const m = txt.match(/\[[\s\S]*\]/);
+          if (m) {
+            try { setResults(JSON.parse(m[0])); }
+            catch { setErr("結果のパースに失敗しました"); }
+          } else setErr("検索結果が取得できませんでした");
+        } catch(e){ setErr(e.message); }
+        setLoading(false);
+      }
+
+      function addSel() {
+        results.filter((_,i)=>sel.has(i)).forEach(r=>{
+          const isYT = r.url&&(r.url.includes("youtube")||r.url.includes("youtu.be"));
+          const vid  = isYT&&r.url.includes("v=") ? r.url.split("v=")[1].split("&")[0] : "";
+          onAdd({ id:Date.now().toString()+Math.random(), url:r.url, title:r.title,
+            description:r.description, source:r.source||(isYT?"YouTube":"Web"),
+            thumbnail: vid?`https://img.youtube.com/vi/${vid}/mqdefault.jpg`:"",
+            publishedAt: r.publishedAt||null, categoryId:catId, read:false, memo:"", slackPosted:false,
+            addedAt:new Date().toISOString() });
+        });
+        onClose();
+      }
+
+      return (
+        <div style={OVERLAY}>
+          <div style={{ ...MODAL(500), maxHeight:"90vh", overflowY:"auto" }}>
+            <MH title="🔍  KEYWORD SEARCH" onClose={onClose} />
+            {!apiKey&&(
+              <div style={{ background:"#FFFBEB", border:"1px solid #FCD34D", padding:"10px 12px", marginBottom:14, fontSize:12, color:"#92400E" }}>
+                ⚙️ 設定からAnthropic APIキーを入力するとClaudeがWebを検索します
+              </div>
+            )}
+            <div style={{ display:"flex", gap:6, marginBottom:14 }}>
+              <input value={kw} onChange={e=>setKw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&doSearch()}
+                placeholder="例: ClaudeCode 最新情報" style={{ ...INPUT, flex:1 }} />
+              <button onClick={()=>doSearch()} disabled={!kw.trim()||loading}
+                style={{ ...BTN_P, opacity:!kw.trim()?0.5:1 }}>
+                {loading?"検索中...":"検索"}
+              </button>
+            </div>
+
+            <label style={LABEL}>追加先カテゴリ</label>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:5, marginBottom:16 }}>
+              {CATEGORIES.map(c=>(
+                <button key={c.id} onClick={()=>setCatId(c.id)}
+                  style={{ padding:"4px 10px", border:`1px solid ${catId===c.id?c.color:"var(--border)"}`, background: catId===c.id?c.color:"none", color: catId===c.id?"#FFF":"var(--muted)", fontSize:11, cursor:"pointer", fontWeight: catId===c.id?700:400, borderRadius:0 }}>
+                  {c.label}
+                </button>
+              ))}
+            </div>
+
+            {loading&&(
+              <div style={{ textAlign:"center", padding:"28px 0", color:"var(--muted)", fontSize:13 }}>
+                <div style={{ fontSize:28, marginBottom:8 }}>🔍</div>Claudeが検索中...
+              </div>
+            )}
+            {err&&<p style={{ fontSize:12, color:ACCENT, marginBottom:10 }}>{err}</p>}
+
+            {results.length>0&&(
+              <>
+                <p style={{ fontSize:11, color:"var(--muted)", marginBottom:8 }}>追加したいものにチェック</p>
+                {results.map((r,i)=>{
+                  const chk = sel.has(i);
+                  return (
+                    <div key={i} onClick={()=>setSel(s=>{ const ns=new Set(s); ns.has(i)?ns.delete(i):ns.add(i); return ns; })}
+                      style={{ display:"flex", gap:10, padding:"10px 12px", marginBottom:6, border:`1px solid ${chk?"#2563EB":"var(--border)"}`, background: chk?"#EFF6FF":"var(--bg)", cursor:"pointer", transition:"all .12s", borderLeft: chk?"4px solid #2563EB":"4px solid transparent" }}>
+                      <div style={{ width:16,height:16,border:`2px solid ${chk?"#2563EB":"var(--border)"}`,background:chk?"#2563EB":"none",flexShrink:0,marginTop:1,display:"flex",alignItems:"center",justifyContent:"center" }}>
+                        {chk&&<span style={{ color:"#FFF",fontSize:9 }}>✓</span>}
+                      </div>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontSize:12,fontWeight:700,color:"var(--text)",marginBottom:2 }}>{r.title}</div>
+                        <div style={{ fontSize:11,color:"var(--muted)",marginBottom:2 }}>{r.description}</div>
+                        <div style={{ display:"flex",gap:10 }}>
+                          <span style={{ fontSize:10,color:"#2563EB" }}>{r.source}</span>
+                          {r.publishedAt&&<span style={{ fontSize:10,color:"var(--muted)" }}>📅 {fmtDate(r.publishedAt)}</span>}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                <button onClick={addSel} disabled={sel.size===0}
+                  style={{ ...BTN_P, width:"100%", marginTop:8, background:sel.size>0?ACCENT:"var(--border)", color:sel.size>0?"#FFF":"var(--muted)" }}>
+                  {sel.size>0?`${sel.size}件を追加する`:"チェックして追加"}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    /* ─── AUTO FETCH ─────────────────────────────────────────────── */
+    const AUTO_QUERIES = [
+      { catId:"hongyou-ai",  label:"生成AI / ClaudeCode",  query:"Claude Anthropic OpenAI 生成AI 最新ニュース 2026 YouTube動画 安野貴博" },
+      { catId:"hongyou-edu", label:"プログラミング教育",      query:"プログラミングスクール ITリスキリング AI学習 教育 最新 2026" },
+      { catId:"fuku-career", label:"IT転職市場",             query:"IT転職 エンジニア転職市場 しごとリーチ 未経験 求人 最新 2026" },
+      { catId:"fuku-sales",  label:"セールス/マーケ転職",     query:"ITセールス SaaS営業 マーケター転職 サラタメ キャリア 最新 2026" },
+      { catId:"common",      label:"業界全般",               query:"PIVOT テクノロジー IT業界 スタートアップ AI動向 ビジネス 最新 2026" },
+    ];
+
+    function AutoFetchModal({ apiKey, existingUrls, onClose, onAddItems }) {
+      const [progress, setProgress] = useState(AUTO_QUERIES.map(q=>({ ...q, status:"pending", count:0, err:"" })));
+      const [finished, setFinished] = useState(false);
+      const [total, setTotal]       = useState(0);
+      const ran = useRef(false);
+
+      useEffect(()=>{ if (!ran.current){ ran.current=true; runAll(); } },[]);
+
+      function upd(catId, patch){ setProgress(p=>p.map(i=>i.catId===catId?{...i,...patch}:i)); }
+
+      async function fetchCat(q) {
+        upd(q.catId, { status:"loading" });
+        try {
+          const res = await fetch("/api/proxy/anthropic",{
+            method:"POST", headers:{"Content-Type":"application/json"},
+            body: JSON.stringify({
+              _apiKey: apiKey,
+              model:"claude-sonnet-4-6", max_tokens:1500,
+              tools:[{ type:"web_search_20250305", name:"web_search" }],
+              system:`あなたはニュース・動画収集アシスタントです。キーワードで検索し、関連性の高い記事・動画を5件見つけて、必ずJSONのみで返してください。フォーマット:
+[{"title":"タイトル","url":"URL","description":"概要（50字以内）","source":"ソース名","publishedAt":"YYYY-MM-DD または null"}]
+preambleもmarkdownも不要。JSONのみ。日付不明の場合はnull。`,
+              messages:[{ role:"user", content:`「${q.query}」で最新の記事・YouTube動画を5件検索してJSON形式で返してください。今日の日付は${fmtDigestDate()}です。なるべく直近のものを優先してください。` }],
+            }),
+          });
+          const data = await res.json();
+          if (data.error) throw new Error(data.error);
+          const txt = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+          const m = txt.match(/\[[\s\S]*\]/);
+          if (!m) throw new Error("結果が取得できませんでした");
+          const results = JSON.parse(m[0]);
+          const newItems = results
+            .filter(r=>r.url&&r.title&&!existingUrls.has(r.url))
+            .map(r=>{
+              const isYT = r.url.includes("youtube")||r.url.includes("youtu.be");
+              const vid  = isYT&&r.url.includes("v=") ? r.url.split("v=")[1].split("&")[0] : "";
+              existingUrls.add(r.url);
+              return { id:Date.now().toString()+Math.random(), url:r.url, title:r.title,
+                description:r.description, source:r.source||(isYT?"YouTube":"Web"),
+                thumbnail: vid?`https://img.youtube.com/vi/${vid}/mqdefault.jpg`:"",
+                publishedAt:r.publishedAt||null, categoryId:q.catId,
+                read:false, memo:"", slackPosted:false, addedAt:new Date().toISOString() };
+            });
+          if (newItems.length) onAddItems(newItems);
+          upd(q.catId, { status:"done", count:newItems.length });
+          return newItems.length;
+        } catch(e){
+          upd(q.catId, { status:"error", err:e.message });
+          return 0;
+        }
+      }
+
+      async function runAll(){
+        for (const q of AUTO_QUERIES){
+          const n = await fetchCat(q);
+          setTotal(t=>t+n);
+        }
+        setFinished(true);
+      }
+
+      const doneCount = progress.filter(p=>p.status==="done"||p.status==="error").length;
+      const pct = Math.round((doneCount/AUTO_QUERIES.length)*100);
+
+      return (
+        <div style={OVERLAY}>
+          <div style={{ ...MODAL(420) }}>
+            <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}.af-spin{display:inline-block;animation:spin .9s linear infinite}`}</style>
+            <div style={{ fontWeight:900, fontSize:15, letterSpacing:"-0.01em", marginBottom:20 }}>
+              🔄 最新情報を自動取得中
+            </div>
+
+            <div style={{ display:"flex", flexDirection:"column", gap:11, marginBottom:18 }}>
+              {progress.map(p=>(
+                <div key={p.catId} style={{ display:"flex", alignItems:"center", gap:10 }}>
+                  <span style={{ fontSize:15, width:22, textAlign:"center",
+                    color: p.status==="pending"?"var(--muted)": p.status==="loading"?"#60A5FA": p.status==="done"?"#059669":ACCENT }}>
+                    {p.status==="pending"&&"○"}
+                    {p.status==="loading"&&<span className="af-spin">⟳</span>}
+                    {p.status==="done"&&"✓"}
+                    {p.status==="error"&&"✗"}
+                  </span>
+                  <div style={{ flex:1 }}>
+                    <span style={{ fontSize:13, color:"var(--text)", fontWeight: p.status==="loading"?700:400 }}>{p.label}</span>
+                    {p.status==="loading"&&<span style={{ fontSize:11, color:"#60A5FA", marginLeft:8 }}>検索中...</span>}
+                    {p.status==="done"&&<span style={{ fontSize:11, color:"#059669", marginLeft:8 }}>+{p.count}件</span>}
+                    {p.status==="error"&&<span style={{ fontSize:11, color:ACCENT, marginLeft:8 }}>取得失敗</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* progress bar */}
+            <div style={{ background:"var(--border)", height:4, marginBottom:16 }}>
+              <div style={{ height:4, background:ACCENT, width:`${pct}%`, transition:"width .5s ease" }} />
+            </div>
+
+            {finished ? (
+              <>
+                <p style={{ fontSize:13, fontWeight:700, textAlign:"center", marginBottom:18 }}>
+                  完了 — {total}件の新しいコンテンツを追加しました
+                </p>
+                <button onClick={onClose} style={{ ...BTN_P, width:"100%" }}>閉じる</button>
+              </>
+            ) : (
+              <p style={{ ...HINT, textAlign:"center" }}>{doneCount} / {AUTO_QUERIES.length} カテゴリ完了</p>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    /* ─── SOURCES BAR ────────────────────────────────────────────── */
+    function SourcesBar({ onSearch }) {
+      return (
+        <div style={{ marginBottom:14 }}>
+          <p style={{ fontSize:9, fontWeight:700, letterSpacing:"0.1em", color:"var(--muted)", textTransform:"uppercase", marginBottom:7 }}>
+            おすすめソース
+          </p>
+          <div style={{ display:"flex", gap:8, overflowX:"auto", paddingBottom:4 }}>
+            {SOURCES.map(s=>{
+              const cat = CATEGORIES.find(c=>c.id===s.catId);
+              return (
+                <button key={s.id} onClick={()=>onSearch(s.query)}
+                  style={{ display:"flex", flexDirection:"column", alignItems:"flex-start", padding:"8px 12px", border:`1px solid var(--border)`, borderTop:`3px solid ${cat?cat.color:ACCENT}`, background:"var(--surface)", cursor:"pointer", flexShrink:0, minWidth:110, gap:3, transition:"box-shadow .15s" }}
+                  onMouseEnter={e=>e.currentTarget.style.boxShadow="0 3px 10px rgba(0,0,0,0.12)"}
+                  onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
+                  <span style={{ fontSize:12, fontWeight:700, color:"var(--text)", letterSpacing:"-0.01em", textAlign:"left", lineHeight:1.3 }}>{s.name}</span>
+                  <span style={{ fontSize:9, color:"var(--muted)", letterSpacing:"0.03em" }}>{s.desc}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    /* ─── DEMO DATA ──────────────────────────────────────────────── */
+    const DEMO_ITEMS = [
+      /* ── 生成AI / ClaudeCode ── */
+      { id:"ai1", title:"Claude Code が GitHub Actions と連携可能に — CI/CDパイプラインを自律実行", url:"https://www.anthropic.com/news/claude-code-actions", description:"PRレビューからテスト修正まで、コードベース全体を把握してCI上で自律的に作業するエージェント機能が追加。", source:"Anthropic Blog", categoryId:"hongyou-ai", read:false, memo:"", slackPosted:false, publishedAt:"2026-04-14", addedAt:new Date(Date.now()-7200000).toISOString(), thumbnail:"" },
+      { id:"ai2", title:"【安野貴博の自由研究】GPT-5 vs Claude 4 — 実務でどう使い分けるか", url:"https://www.youtube.com/watch?v=yasuno_gpt5_claude4", description:"政治家・AI研究者の安野貴博が最新モデルを実務目線で比較。コーディング・文書作成・推論タスク別に解説。", source:"YouTube", categoryId:"hongyou-ai", read:false, memo:"", slackPosted:false, publishedAt:"2026-04-12", addedAt:new Date(Date.now()-86400000).toISOString(), thumbnail:"https://img.youtube.com/vi/yasuno_gpt5_claude4/mqdefault.jpg" },
+      { id:"ai3", title:"【PIVOT】生成AIが変える「仕事の定義」2026年版 — 消える職種・残る職種", url:"https://www.youtube.com/watch?v=pivot_ai_jobs2026", description:"AIによる職種代替の最新データと、人間に残るスキルセットを経営者・専門家が議論。", source:"YouTube", categoryId:"hongyou-ai", read:false, memo:"", slackPosted:false, publishedAt:"2026-04-10", addedAt:new Date(Date.now()-172800000).toISOString(), thumbnail:"https://img.youtube.com/vi/pivot_ai_jobs2026/mqdefault.jpg" },
+      { id:"ai4", title:"Google Gemini 2.5 Pro がコーディングベンチマークで首位に — Claude との差は？", url:"https://techcrunch.com/2026/04/08/gemini-25-pro-coding-benchmark", description:"LiveCodeBenchでGPT-5を抜いてトップへ。ただし長文コンテキスト処理ではClaudeが優位という結果に。", source:"TechCrunch", categoryId:"hongyou-ai", read:false, memo:"", slackPosted:false, publishedAt:"2026-04-08", addedAt:new Date(Date.now()-259200000).toISOString(), thumbnail:"" },
+      { id:"ai5", title:"Zenn: Claude Code × Cursor を組み合わせた開発フローが話題 — 実例コード付き", url:"https://zenn.dev/articles/claudecode-cursor-workflow", description:"AIエージェントを組み合わせて設計→実装→テストを半自動化するワークフローを詳解。スクール教材に応用できそう。", source:"Zenn", categoryId:"hongyou-ai", read:false, memo:"", slackPosted:false, publishedAt:"2026-04-07", addedAt:new Date(Date.now()-345600000).toISOString(), thumbnail:"" },
+
+      /* ── プログラミング教育 ── */
+      { id:"edu1", title:"プログラミングスクール市場2026年版 — AI特化コース受講者が前年比3倍に", url:"https://edtechnews.jp/programming-school-2026", description:"生成AIコース新設ラッシュが続く中、就職率・満足度の実態データを比較調査した最新レポート。", source:"EdTech News", categoryId:"hongyou-edu", read:false, memo:"", slackPosted:false, publishedAt:"2026-04-13", addedAt:new Date(Date.now()-43200000).toISOString(), thumbnail:"" },
+      { id:"edu2", title:"【PIVOT】リスキリング・学び直し需要が急増 — 企業は何を求めているか", url:"https://www.youtube.com/watch?v=pivot_reskilling2026", description:"大企業のDX研修予算が増加する一方、何を学ばせるかで迷走する現場の実態をPIVOTが深掘り。", source:"YouTube", categoryId:"hongyou-edu", read:false, memo:"", slackPosted:false, publishedAt:"2026-04-09", addedAt:new Date(Date.now()-604800000).toISOString(), thumbnail:"https://img.youtube.com/vi/pivot_reskilling2026/mqdefault.jpg" },
+      { id:"edu3", title:"「AIに仕事を奪われる前に学ぶ」30代の学び直し最前線 — 受講者インタビュー集", url:"https://note.com/ai_reskilling_30s", description:"非IT職から生成AIコースを受講した30代の転職・副業成功事例を5件紹介。営業職出身者の事例が参考になる。", source:"note", categoryId:"hongyou-edu", read:false, memo:"", slackPosted:false, publishedAt:"2026-04-06", addedAt:new Date(Date.now()-432000000).toISOString(), thumbnail:"" },
+      { id:"edu4", title:"プログラミング教育 カリキュラム設計トレンド2026 — AI前提の学習設計とは", url:"https://qiita.com/programming_curriculum_2026", description:"AIコーディング支援が当たり前になった今、何を人間が学ぶべきか。スクール設計者向けの実践ガイド。", source:"Qiita", categoryId:"hongyou-edu", read:false, memo:"", slackPosted:false, publishedAt:"2026-04-05", addedAt:new Date(Date.now()-518400000).toISOString(), thumbnail:"" },
+      { id:"edu5", title:"未経験からエンジニア転職 — 2026年最新データ：合格率・期間・年収の実態", url:"https://career-hack.jp/uncategorized/engineer-career-change-2026", description:"主要10スクールの受講後就職データを独自集計。AIコース修了者の転職期間は平均4.2ヶ月と短縮傾向。", source:"Career Hack", categoryId:"hongyou-edu", read:false, memo:"", slackPosted:false, publishedAt:"2026-04-03", addedAt:new Date(Date.now()-691200000).toISOString(), thumbnail:"" },
+
+      /* ── IT転職市場 ── */
+      { id:"job1", title:"【しごとリーチ】2026年春 AIエンジニア求人が前年比2.3倍 — 未経験採用枠はどこにある？", url:"https://www.youtube.com/watch?v=shigotoreachAI2026", description:"AIエンジニア・データサイエンティストの求人急増背景と、未経験から狙える企業の特徴をデータで解説。", source:"YouTube", categoryId:"fuku-career", read:false, memo:"", slackPosted:false, publishedAt:"2026-04-15", addedAt:new Date(Date.now()-10800000).toISOString(), thumbnail:"https://img.youtube.com/vi/shigotoreachAI2026/mqdefault.jpg" },
+      { id:"job2", title:"【転職のサラタメさん】エンジニア転職で失敗する人の共通点3つ — 元人事が解説", url:"https://www.youtube.com/watch?v=salatame_engineer_fail", description:"ポートフォリオ・面接・条件交渉それぞれの落とし穴。未経験転職志望者が陥りやすいパターンを具体的に説明。", source:"YouTube", categoryId:"fuku-career", read:false, memo:"", slackPosted:false, publishedAt:"2026-04-11", addedAt:new Date(Date.now()-129600000).toISOString(), thumbnail:"https://img.youtube.com/vi/salatame_engineer_fail/mqdefault.jpg" },
+      { id:"job3", title:"フルリモート求人2026年版 — IT職種別・完全在宅比率ランキング", url:"https://doda.jp/guide/remote-work-2026/", description:"完全在宅の求人が最も多い職種はインフラエンジニア（63%）。Webエンジニアは45%と昨年比微減。", source:"doda", categoryId:"fuku-career", read:false, memo:"", slackPosted:false, publishedAt:"2026-04-09", addedAt:new Date(Date.now()-216000000).toISOString(), thumbnail:"" },
+      { id:"job4", title:"第二新卒エンジニア採用マーケット2026 — 20代後半の転職難易度は下がっているか", url:"https://levtech.jp/media/article/column/second-newgrad-2026/", description:"25〜28歳の未経験・第二新卒エンジニア採用数が増加。受入企業の業種・規模の傾向を解説。", source:"レバテック", categoryId:"fuku-career", read:false, memo:"", slackPosted:false, publishedAt:"2026-04-07", addedAt:new Date(Date.now()-302400000).toISOString(), thumbnail:"" },
+      { id:"job5", title:"IT転職の年収相場マップ2026 — 職種・経験年数・スキルセット別まとめ", url:"https://www.green-japan.com/content/salary-map-2026", description:"AIスキル保有者は同職種内で平均15〜25%の年収プレミアム。職種別の詳細データを網羅。", source:"Green", categoryId:"fuku-career", read:false, memo:"", slackPosted:false, publishedAt:"2026-04-04", addedAt:new Date(Date.now()-475200000).toISOString(), thumbnail:"" },
+
+      /* ── セールス/マーケ転職 ── */
+      { id:"sal1", title:"【転職のサラタメさん】ITセールス転職の年収・働き方リアル — SaaS営業は本当においしいか", url:"https://www.youtube.com/watch?v=salatame_saas_sales", description:"SaaS営業職の平均年収・インセンティブ構造・キャリアパスを徹底解説。未経験からの参入可能性も。", source:"YouTube", categoryId:"fuku-sales", read:false, memo:"", slackPosted:false, publishedAt:"2026-04-14", addedAt:new Date(Date.now()-21600000).toISOString(), thumbnail:"https://img.youtube.com/vi/salatame_saas_sales/mqdefault.jpg" },
+      { id:"sal2", title:"【しごとリーチ】マーケター転職市場2026 — デジタル×AIスキルを持つ人材の争奪戦", url:"https://www.youtube.com/watch?v=shigotoreach_marketing", description:"データドリブンマーケターへの需要が急増。未経験から狙えるデジタルマーケ求人の特徴と攻略法。", source:"YouTube", categoryId:"fuku-sales", read:false, memo:"", slackPosted:false, publishedAt:"2026-04-11", addedAt:new Date(Date.now()-115200000).toISOString(), thumbnail:"https://img.youtube.com/vi/shigotoreach_marketing/mqdefault.jpg" },
+      { id:"sal3", title:"インサイドセールス職の年収・求人数が急増 — 2026年最新マーケットレポート", url:"https://saleszine.jp/article/inside-sales-market-2026", description:"コロナ禍で広まったIS職が定着。平均年収450〜600万円帯の求人が増加し、文系出身者の受け入れも活発。", source:"SalesZine", categoryId:"fuku-sales", read:false, memo:"", slackPosted:false, publishedAt:"2026-04-08", addedAt:new Date(Date.now()-288000000).toISOString(), thumbnail:"" },
+      { id:"sal4", title:"異業種からITセールスへの転職に成功した人の共通点 — 実例5選", url:"https://note.com/it_sales_career_change", description:"金融・不動産・メーカー営業からSaaS・IT営業への転職成功パターンを分析。アピール戦略の共通点とは。", source:"note", categoryId:"fuku-sales", read:false, memo:"", slackPosted:false, publishedAt:"2026-04-05", addedAt:new Date(Date.now()-388800000).toISOString(), thumbnail:"" },
+      { id:"sal5", title:"BtoB SaaSのカスタマーサクセス求人が急増 — 20代未経験でも採用されやすい理由", url:"https://type.jp/et/feature/cs-career-2026/", description:"CSは営業未経験でも入りやすく、年収・キャリアの伸び代が大きい職種。求人企業と求められるスキルを解説。", source:"type", categoryId:"fuku-sales", read:false, memo:"", slackPosted:false, publishedAt:"2026-04-02", addedAt:new Date(Date.now()-561600000).toISOString(), thumbnail:"" },
+
+      /* ── 業界全般 ── */
+      { id:"gen1", title:"【PIVOT】日本のスタートアップ冬の時代は終わったか — 2026年資金調達トレンド", url:"https://www.youtube.com/watch?v=pivot_startup_2026", description:"AIスタートアップへの投資が復調。国内VCの動向と、注目されているカテゴリを有識者パネルが議論。", source:"YouTube", categoryId:"common", read:false, memo:"", slackPosted:false, publishedAt:"2026-04-13", addedAt:new Date(Date.now()-57600000).toISOString(), thumbnail:"https://img.youtube.com/vi/pivot_startup_2026/mqdefault.jpg" },
+      { id:"gen2", title:"デジタル庁 AI活用ガイドライン2026年改訂版を公開 — 企業の対応ポイント", url:"https://www.digital.go.jp/policies/ai-guideline-2026/", description:"生成AIの業務利用に関する安全基準・ガバナンス要件が更新。企業のコンプライアンス対応が必要に。", source:"デジタル庁", categoryId:"common", read:false, memo:"", slackPosted:false, publishedAt:"2026-04-10", addedAt:new Date(Date.now()-187200000).toISOString(), thumbnail:"" },
+      { id:"gen3", title:"Z世代のキャリア観調査2026 — 「安定より成長」志向が顕著に", url:"https://www.nikkei.com/article/z-generation-career-2026", description:"20代の転職意向が過去最高水準。副業・フリーランス志向も増加し、企業側の採用・定着戦略に影響。", source:"日経", categoryId:"common", read:false, memo:"", slackPosted:false, publishedAt:"2026-04-06", addedAt:new Date(Date.now()-360000000).toISOString(), thumbnail:"" },
+      { id:"gen4", title:"ChatGPT・Claude・Gemini — ビジネス利用の現状調査2026（国内1,200社）", url:"https://mmdresearch.jp/report/ai-biz-survey-2026", description:"大企業の73%が生成AIを業務導入済み。活用部署・用途・課題の最新実態データを網羅したレポート。", source:"MMD研究所", categoryId:"common", read:false, memo:"", slackPosted:false, publishedAt:"2026-04-04", addedAt:new Date(Date.now()-446400000).toISOString(), thumbnail:"" },
+      { id:"gen5", title:"【安野貴博の自由研究】AI規制の世界動向まとめ — EU・米国・日本でここまで違う", url:"https://www.youtube.com/watch?v=yasuno_ai_regulation", description:"EU AI Actの施行状況、米国の大統領令、日本の自主規制路線を比較解説。ビジネスへの影響を整理。", source:"YouTube", categoryId:"common", read:false, memo:"", slackPosted:false, publishedAt:"2026-04-01", addedAt:new Date(Date.now()-648000000).toISOString(), thumbnail:"https://img.youtube.com/vi/yasuno_ai_regulation/mqdefault.jpg" },
+    ];
+
+    /* ─── APP ────────────────────────────────────────────────────── */
+    function App() {
+      const [items, setItems]       = useState([]);
+      const [settings, setSettings] = useState({ apiKey:"", slackWebhook:"" });
+      const [filter,  setFilter]    = useState("unread");
+      const [catFilt, setCatFilt]   = useState("all");
+      const [slackTgt, setSlackTgt] = useState(null);
+      const [showAdd,  setShowAdd]  = useState(false);
+      const [searchKw, setSearchKw] = useState(null);  // null = closed, string = open with keyword
+      const [showSett, setShowSett] = useState(false);
+      const [showBatch,    setShowBatch]    = useState(false);
+      const [showAutoFetch,setShowAutoFetch] = useState(false);
+      const [loaded,  setLoaded]    = useState(false);
+      const [dark,    setDark]      = useState(false);
+
+      useEffect(()=>{
+        try {
+          const s = localStorage.getItem("catchup_items");
+          setItems(s?(JSON.parse(s).length?JSON.parse(s):DEMO_ITEMS):DEMO_ITEMS);
+          const cfg = localStorage.getItem("catchup_settings");
+          if (cfg) setSettings(JSON.parse(cfg));
+        } catch { setItems(DEMO_ITEMS); }
+        setLoaded(true);
+      },[]);
+
+      useEffect(()=>{ if (loaded) localStorage.setItem("catchup_items",JSON.stringify(items)); },[items,loaded]);
+
+      function saveSettings(s){ setSettings(s); localStorage.setItem("catchup_settings",JSON.stringify(s)); }
+      function updItem(u){ setItems(p=>p.map(i=>i.id===u.id?u:i)); }
+      function addItem(item){ setItems(p=>[item,...p]); }
+      function addItems(newItems){ setItems(p=>[...newItems,...p]); }
+      function markSlack(item){ updItem({...item,slackPosted:true,read:true}); }
+      function markBatch(ids){ setItems(p=>p.map(i=>ids.includes(i.id)?{...i,slackPosted:true,read:true}:i)); }
+
+      const filtered = items.filter(item=>{
+        const rOk = filter==="all"||(filter==="unread"&&!item.read)||(filter==="read"&&item.read);
+        const cOk = catFilt==="all"||item.categoryId===catFilt;
+        return rOk&&cOk;
+      });
+
+      const unread = items.filter(i=>!i.read).length;
+      const batch  = items.filter(i=>i.memo&&i.memo.trim()&&!i.slackPosted).length;
+      const typeCnt= {
+        hongyou: items.filter(i=>!i.read&&CATEGORIES.find(c=>c.id===i.categoryId)?.type==="hongyou").length,
+        fuku:    items.filter(i=>!i.read&&CATEGORIES.find(c=>c.id===i.categoryId)?.type==="fuku").length,
+      };
+      const noSettings = !settings.apiKey||!settings.slackWebhook;
+      const cv = cssVars(dark);
+
+      return (
+        <div style={{ ...cv, minHeight:"100vh", background:"var(--bg)", color:"var(--text)", fontFamily:"'Noto Sans JP',-apple-system,sans-serif", transition:"background .2s, color .2s" }}>
+
+          {/* ── HEADER ── */}
+          <header style={{ background:"var(--hbg)", borderBottom:`3px solid ${ACCENT}`, padding:"14px 16px", position:"sticky", top:0, zIndex:50 }}>
+            <div style={{ maxWidth:680, margin:"0 auto" }}>
+              {/* top row */}
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <div style={{ flex:1 }}>
+                  <div style={{ display:"flex", alignItems:"baseline", gap:10 }}>
+                    <span style={{ fontSize:20, fontWeight:900, color:"#FFFFFF", letterSpacing:"-0.04em", lineHeight:1 }}>CATCHUP</span>
+                    {unread>0&&<span style={{ fontSize:10, fontWeight:700, padding:"2px 7px", background:ACCENT, color:"#FFF", letterSpacing:"0.05em" }}>{unread} 未読</span>}
+                  </div>
+                  <div style={{ display:"flex", gap:10, alignItems:"center", marginTop:3 }}>
+                    <span style={{ fontSize:11, color:"rgba(255,255,255,0.6)", letterSpacing:"0.04em", fontWeight:500 }}>
+                      {getTodayString()}
+                    </span>
+                    {Object.entries(typeCnt).map(([t,n])=>n>0&&(
+                      <span key={t} style={{ fontSize:10, color: t==="hongyou"?"#93C5FD":"#6EE7B7", fontWeight:600 }}>
+                        {TYPE_LABELS[t]} {n}件
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* action buttons */}
+                <div style={{ display:"flex", gap:6, alignItems:"center", flexWrap:"wrap", justifyContent:"flex-end" }}>
+                  {batch>0&&(
+                    <button onClick={()=>setShowBatch(true)}
+                      style={{ position:"relative", padding:"7px 12px", border:"1px solid #4ADE80", background:"none", color:"#4ADE80", fontSize:11, cursor:"pointer", fontWeight:700, letterSpacing:"0.04em" }}>
+                      📤 まとめて投稿
+                      <span style={{ position:"absolute", top:-6, right:-6, fontSize:9, fontWeight:700, padding:"1px 5px", background:"#059669", color:"#FFF" }}>{batch}</span>
+                    </button>
+                  )}
+                  <button onClick={()=>{ if(!settings.apiKey){setShowSett(true);}else{setShowAutoFetch(true);} }}
+                    style={{ padding:"7px 12px", border:"1px solid rgba(255,255,255,0.45)", background:"rgba(255,255,255,0.08)", color:"#FFFFFF", fontSize:11, cursor:"pointer", fontWeight:700, letterSpacing:"0.04em" }}>
+                    🔄 自動取得
+                  </button>
+                  <button onClick={()=>setSearchKw("")}
+                    style={{ padding:"7px 12px", border:"1px solid rgba(255,255,255,0.3)", background:"none", color:"rgba(255,255,255,0.85)", fontSize:11, cursor:"pointer", letterSpacing:"0.04em" }}>
+                    🔍 検索
+                  </button>
+                  <button onClick={()=>setShowAdd(true)}
+                    style={{ padding:"7px 12px", border:`1px solid ${ACCENT}`, background:ACCENT, color:"#FFF", fontSize:11, cursor:"pointer", fontWeight:700, letterSpacing:"0.04em" }}>
+                    ＋ 追加
+                  </button>
+                  <button onClick={()=>setShowSett(true)}
+                    style={{ width:32, height:32, border:`1px solid ${noSettings?"#FCD34D":"rgba(255,255,255,0.3)"}`, background:"none", cursor:"pointer", fontSize:14, display:"flex", alignItems:"center", justifyContent:"center", position:"relative" }}>
+                    ⚙️
+                    {noSettings&&<span style={{ position:"absolute", top:-4, right:-4, width:8, height:8, background:"#F59E0B", borderRadius:"50%", border:"1.5px solid var(--hbg)" }} />}
+                  </button>
+                  <button onClick={()=>setDark(d=>!d)}
+                    style={{ width:32, height:32, border:"1px solid rgba(255,255,255,0.3)", background:"none", cursor:"pointer", fontSize:14, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    {dark?"☀️":"🌙"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          {/* ── CONTENT ── */}
+          <main style={{ maxWidth:680, margin:"0 auto", padding:"16px 16px 40px" }}>
+
+            {/* Filters */}
+            <div style={{ display:"flex", gap:5, marginBottom:14, overflowX:"auto", paddingBottom:2 }}>
+              {[["unread","未読"],["read","既読"],["all","すべて"]].map(([v,l])=>(
+                <button key={v} onClick={()=>setFilter(v)}
+                  style={{ padding:"6px 14px", border:`1px solid ${filter===v?ACCENT:"var(--border)"}`, background: filter===v?ACCENT:"none", color: filter===v?"#FFF":"var(--muted)", fontSize:11, cursor:"pointer", fontWeight: filter===v?700:400, whiteSpace:"nowrap", flexShrink:0, letterSpacing:"0.04em", borderRadius:0 }}>
+                  {l}
+                </button>
+              ))}
+              <div style={{ width:1, background:"var(--border)", margin:"0 3px", flexShrink:0 }} />
+              <button onClick={()=>setCatFilt("all")}
+                style={{ padding:"6px 14px", border:`1px solid ${catFilt==="all"?"var(--text)":"var(--border)"}`, background: catFilt==="all"?"var(--surface)":"none", color: catFilt==="all"?"var(--text)":"var(--muted)", fontSize:11, cursor:"pointer", whiteSpace:"nowrap", flexShrink:0, letterSpacing:"0.04em", borderRadius:0, fontWeight: catFilt==="all"?700:400 }}>
+                全て
+              </button>
+              {CATEGORIES.map(c=>(
+                <button key={c.id} onClick={()=>setCatFilt(c.id)}
+                  style={{ padding:"6px 14px", border:`1px solid ${catFilt===c.id?c.color:"var(--border)"}`, background: catFilt===c.id?c.color:"none", color: catFilt===c.id?"#FFF":"var(--muted)", fontSize:11, cursor:"pointer", fontWeight: catFilt===c.id?700:400, whiteSpace:"nowrap", flexShrink:0, letterSpacing:"0.03em", borderRadius:0 }}>
+                  {c.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Sources */}
+            <SourcesBar onSearch={q=>setSearchKw(q)} />
+
+            {/* Cards */}
+            {!loaded ? (
+              <div style={{ textAlign:"center", padding:"56px 0", color:"var(--muted)", fontSize:13, letterSpacing:"0.05em" }}>読み込み中...</div>
+            ) : filtered.length===0 ? (
+              <div style={{ textAlign:"center", padding:"56px 0" }}>
+                <div style={{ fontSize:42, marginBottom:14 }}>📭</div>
+                <p style={{ color:"var(--muted)", fontSize:13, marginBottom:20, letterSpacing:"0.02em" }}>
+                  {filter==="unread"?"未読コンテンツがありません":"コンテンツがありません"}
+                </p>
+                <div style={{ display:"flex", gap:8, justifyContent:"center", flexWrap:"wrap" }}>
+                  <button onClick={()=>{ if(!settings.apiKey){setShowSett(true);}else{setShowAutoFetch(true);} }} style={BTN_P}>🔄 自動取得する</button>
+                  <button onClick={()=>setSearchKw("")} style={{ ...BTN_G }}>🔍 キーワード検索</button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                {filtered.map(item=>(
+                  <ContentCard key={item.id} item={item} onUpdate={updItem} onSlack={setSlackTgt} />
+                ))}
+              </div>
+            )}
+          </main>
+
+          {/* ── MODALS ── */}
+          {showAutoFetch && <AutoFetchModal apiKey={settings.apiKey} existingUrls={new Set(items.map(i=>i.url))} onClose={()=>setShowAutoFetch(false)} onAddItems={addItems} />}
+          {slackTgt  && <SlackPreview  item={slackTgt} slackWebhook={settings.slackWebhook} onClose={()=>setSlackTgt(null)} onPost={()=>markSlack(slackTgt)} />}
+          {showBatch && <BatchSlackModal items={items} slackWebhook={settings.slackWebhook} onClose={()=>setShowBatch(false)} onDone={markBatch} />}
+          {showAdd   && <AddModal onClose={()=>setShowAdd(false)} onAdd={addItem} />}
+          {searchKw!==null && <SearchModal apiKey={settings.apiKey} defaultKeyword={searchKw} onClose={()=>setSearchKw(null)} onAdd={addItem} />}
+          {showSett  && <SettingsModal settings={settings} onSave={saveSettings} onClose={()=>setShowSett(false)} />}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
