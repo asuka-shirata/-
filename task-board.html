@@ -33,13 +33,27 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState } = React;
+    const { useState, useEffect } = React;
 
-    function TaskBoard() {
-      const [tasks, setTasks] = useState([
+    const STORAGE_KEY = "task-board-tasks";
+
+    function loadTasks() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) return JSON.parse(saved);
+      } catch {}
+      return [
         { id: 1, text: "Claude Code の使い方を学ぶ", done: true },
         { id: 2, text: "タスクボードアプリを完成させる", done: false },
-      ]);
+      ];
+    }
+
+    function TaskBoard() {
+      const [tasks, setTasks] = useState(loadTasks);
+
+      useEffect(() => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+      }, [tasks]);
       const [input, setInput] = useState("");
 
       function addTask() {
