@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>東京の今日の天気</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: "Hiragino Sans", "Noto Sans JP", sans-serif;
+      background: linear-gradient(135deg, #1a6ec8 0%, #0a3d8f 100%);
+      color: #fff;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 24px;
+      padding: 40px 48px;
+      width: min(480px, 90vw);
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .location {
+      font-size: 1rem;
+      letter-spacing: 0.15em;
+      opacity: 0.8;
+      margin-bottom: 4px;
+    }
+
+    .date {
+      font-size: 0.85rem;
+      opacity: 0.65;
+      margin-bottom: 24px;
+    }
+
+    .weather-icon {
+      width: 100px;
+      height: 100px;
+      margin: 0 auto 8px;
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+    }
+
+    .description {
+      font-size: 1.1rem;
+      text-transform: capitalize;
+      opacity: 0.9;
+      margin-bottom: 24px;
+    }
+
+    .temp-main {
+      font-size: 5rem;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .temp-main sup {
+      font-size: 2rem;
+      vertical-align: super;
+    }
+
+    .temp-range {
+      font-size: 0.95rem;
+      opacity: 0.75;
+      margin-bottom: 32px;
+    }
+
+    .details {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      border-top: 1px solid rgba(255,255,255,0.2);
+      padding-top: 24px;
+    }
+
+    .detail-item label {
+      display: block;
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      opacity: 0.65;
+      margin-bottom: 4px;
+    }
+
+    .detail-item span {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    /* Loading / Error states */
+    .state {
+      padding: 40px 0;
+    }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .error-msg { font-size: 0.9rem; opacity: 0.85; line-height: 1.6; }
+
+    .reload-btn {
+      margin-top: 20px;
+      padding: 10px 24px;
+      border: 1px solid rgba(255,255,255,0.5);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: background 0.2s;
+    }
+    .reload-btn:hover { background: rgba(255,255,255,0.28); }
+
+    #weather-content { display: none; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <!-- Loading -->
+    <div id="loading" class="state">
+      <div class="spinner"></div>
+      <p>天気情報を取得中...</p>
+    </div>
+
+    <!-- Error -->
+    <div id="error" class="state" style="display:none;">
+      <div class="error-icon">⚠️</div>
+      <p class="error-msg" id="error-msg"></p>
+      <button class="reload-btn" onclick="fetchWeather()">再試行</button>
+    </div>
+
+    <!-- Weather content -->
+    <div id="weather-content">
+      <p class="location">📍 東京</p>
+      <p class="date" id="date-str"></p>
+
+      <img id="icon" class="weather-icon" src="" alt="天気アイコン" />
+      <p class="description" id="description"></p>
+
+      <div class="temp-main" id="temp"></div>
+      <p class="temp-range" id="temp-range"></p>
+
+      <div class="details">
+        <div class="detail-item">
+          <label>湿度</label>
+          <span id="humidity">--</span>
+        </div>
+        <div class="detail-item">
+          <label>風速</label>
+          <span id="wind">--</span>
+        </div>
+        <div class="detail-item">
+          <label>体感温度</label>
+          <span id="feels-like">--</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function show(id) {
+      ["loading", "error", "weather-content"].forEach(el => {
+        document.getElementById(el).style.display = el === id ? "" : "none";
+      });
+    }
+
+    function formatDate(ts) {
+      const d = ts ? new Date(ts * 1000) : new Date();
+      return d.toLocaleDateString("ja-JP", {
+        year: "numeric", month: "long", day: "numeric",
+        weekday: "short",
+      });
+    }
+
+    async function fetchWeather() {
+      show("loading");
+      try {
+        const res = await fetch("/api/weather");
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || `HTTP ${res.status}`);
+        }
+
+        document.getElementById("date-str").textContent = formatDate(data.dt);
+
+        const icon = data.weather?.[0]?.icon ?? "01d";
+        document.getElementById("icon").src =
+          `https://openweathermap.org/img/wn/${icon}@2x.png`;
+
+        document.getElementById("description").textContent =
+          data.weather?.[0]?.description ?? "";
+
+        const temp = Math.round(data.main?.temp ?? 0);
+        document.getElementById("temp").innerHTML = `${temp}<sup>℃</sup>`;
+
+        const hi = Math.round(data.main?.temp_max ?? 0);
+        const lo = Math.round(data.main?.temp_min ?? 0);
+        document.getElementById("temp-range").textContent =
+          `最高 ${hi}℃ / 最低 ${lo}℃`;
+
+        document.getElementById("humidity").textContent =
+          `${data.main?.humidity ?? "--"}%`;
+        document.getElementById("wind").textContent =
+          `${data.wind?.speed ?? "--"} m/s`;
+        document.getElementById("feels-like").textContent =
+          `${Math.round(data.main?.feels_like ?? 0)}℃`;
+
+        show("weather-content");
+      } catch (err) {
+        document.getElementById("error-msg").textContent = String(err.message ?? err);
+        show("error");
+      }
+    }
+
+    fetchWeather();
+  </script>
+</body>
+</html>
