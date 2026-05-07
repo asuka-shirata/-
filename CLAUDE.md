@@ -56,3 +56,30 @@ Claude Code の学習・実践用プロジェクト。複数のサブプロジ�
 
 - Python 3 系
 - ローカルサーバー起動: `python serve.py`
+
+## デプロイ先
+
+| ページ | URL |
+|---|---|
+| タスクボード | https://asuka-shirata.github.io/task-board/ |
+| 全体（GitHub Pages） | https://asuka-shirata.github.io/-/ |
+
+## 技術スタック
+
+| 種別 | 技術 |
+|---|---|
+| UI フレームワーク | React 18（CDN: unpkg） |
+| JSX トランスパイル | Babel Standalone（CDN: unpkg） |
+| スタイリング | インラインスタイル（JS オブジェクト） |
+| 状態管理 | React Hooks（`useState` / `useEffect`） |
+| データ永続化 | localStorage |
+| サーバーサイド | Python 3 標準ライブラリ（`http.server`） |
+| ビルドツール | なし（単一 HTML ファイルで完結） |
+
+## コンポーネント命名規約
+
+- **コンポーネント名**: PascalCase（例: `TaskBoard`、`OGPParser`）
+- **関数名**: camelCase（例: `addTask`、`toggleTask`、`deleteTask`）
+- **定数**: UPPER_SNAKE_CASE（例: `STORAGE_KEY`）
+- **スタイル定数**: camelCase のオブジェクトキー（例: `styles.addBtn`、`styles.taskText`）
+- **ファイル名**: kebab-case（例: `task-board.html`、`catchup-dashboard.html`）
