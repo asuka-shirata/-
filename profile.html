@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile — あすか</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Noto+Serif+JP:wght@300;400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      background: #faf8f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Noto Serif JP', serif;
+      color: #2c2417;
+    }
+
+    .page {
+      width: 100%;
+      max-width: 480px;
+      padding: 48px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+    }
+
+    /* ── Avatar ── */
+    .avatar-wrap {
+      position: relative;
+      margin-bottom: 36px;
+    }
+
+    .avatar-ring {
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #c8a97e 0%, #e8d5b7 50%, #a07850 100%);
+      padding: 3px;
+      box-shadow: 0 8px 32px rgba(160, 120, 80, 0.25);
+    }
+
+    .avatar-inner {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: #faf8f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 56px;
+    }
+
+    .avatar-badge {
+      position: absolute;
+      bottom: 4px;
+      right: 4px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #2c2417;
+      border: 3px solid #faf8f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    /* ── Name ── */
+    .name-en {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 13px;
+      letter-spacing: 0.35em;
+      color: #a07850;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .name-ja {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 52px;
+      font-weight: 300;
+      letter-spacing: 0.08em;
+      line-height: 1;
+      margin-bottom: 32px;
+    }
+
+    /* ── Divider ── */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      margin-bottom: 32px;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(to right, transparent, #c8a97e, transparent);
+    }
+
+    .divider-icon {
+      font-size: 14px;
+      color: #c8a97e;
+    }
+
+    /* ── Cards ── */
+    .cards {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 2px 12px rgba(160, 120, 80, 0.08);
+      border: 1px solid rgba(200, 169, 126, 0.2);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px rgba(160, 120, 80, 0.14);
+    }
+
+    .card-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #f5ede0 0%, #ecdcc8 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+
+    .card-body {
+      flex: 1;
+    }
+
+    .card-label {
+      font-size: 10px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: #a07850;
+      margin-bottom: 4px;
+    }
+
+    .card-value {
+      font-size: 15px;
+      font-weight: 400;
+      line-height: 1.5;
+      color: #2c2417;
+    }
+
+    /* ── Today's word ── */
+    .today {
+      width: 100%;
+      background: linear-gradient(135deg, #2c2417 0%, #4a3825 100%);
+      border-radius: 20px;
+      padding: 28px 28px;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 32px;
+    }
+
+    .today::before {
+      content: '"';
+      position: absolute;
+      top: -12px;
+      left: 20px;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 120px;
+      color: rgba(200, 169, 126, 0.15);
+      line-height: 1;
+    }
+
+    .today-label {
+      font-size: 10px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: #c8a97e;
+      margin-bottom: 12px;
+      position: relative;
+    }
+
+    .today-text {
+      font-size: 16px;
+      line-height: 1.8;
+      color: #faf8f5;
+      position: relative;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      color: #c8b89a;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <div class="avatar-wrap">
+      <div class="avatar-ring">
+        <div class="avatar-inner">🌸</div>
+      </div>
+      <div class="avatar-badge">✦</div>
+    </div>
+
+    <p class="name-en">Profile</p>
+    <h1 class="name-ja">あすか</h1>
+
+    <div class="divider">
+      <span class="divider-icon">✦</span>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-icon">☕</div>
+        <div class="card-body">
+          <p class="card-label">Favourite</p>
+          <p class="card-value">コーヒー</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="today">
+      <p class="today-label">Today's Word</p>
+      <p class="today-text">Claude Code デビューしました！</p>
+    </div>
+
+    <p class="footer">© 2026 Asuka</p>
+  </div>
+</body>
+</html>
