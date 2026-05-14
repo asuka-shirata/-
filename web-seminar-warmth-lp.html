@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>50代からのWebサイト制作体験セミナー | 地域を彩るWebサイトをあなたの手で</title>
+  <meta name="description" content="定年退職後の50代後半の方へ。専門知識不要・完全無料のオンラインセミナー。地域活動のWebサイトをゼロから作る喜びを体験しませんか？">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=Noto+Serif+JP:wght@300;400;500;600;700;900&family=Shippori+Mincho+B1:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+  /* ═══════════════════════════════════════
+     BASE
+  ═══════════════════════════════════════ */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cream:      #FAF7F1;
+    --beige:      #F2E9D8;
+    --parchment:  #EAE0CC;
+    --ink:        #221206;
+    --brown:      #5A3718;
+    --warm-gray:  #917E6C;
+    --terra:      #C4634A;
+    --terra-pale: #E8C4B2;
+    --green:      #3B5740;
+    --mustard:    #C49A26;
+    --gold:       #F0D070;
+    --shadow:     rgba(34, 18, 6, 0.22);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Noto Serif JP', serif;
+    background: var(--cream);
+    color: var(--ink);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  img { display: block; max-width: 100%; }
+
+  /* ═══════════════════════════════════════
+     HERO  —  フルスクリーン没入型
+  ═══════════════════════════════════════ */
+  .hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    overflow: hidden;
+  }
+
+  /* 背景画像 */
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+  }
+  .hero-bg img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    object-position: center 30%;
+    filter: contrast(1.08) brightness(0.72) saturate(1.18) sepia(0.14);
+    transform: scale(1.04);
+    transition: transform 8s ease-out;
+  }
+  .hero-bg img.loaded { transform: scale(1); }
+
+  /* グラデーションオーバーレイ */
+  .hero-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background:
+      linear-gradient(175deg,
+        rgba(18, 8, 2, 0.05) 0%,
+        rgba(18, 8, 2, 0.42) 45%,
+        rgba(10, 4, 0, 0.82) 100%
+      ),
+      linear-gradient(90deg,
+        rgba(0,0,0,0.18) 0%,
+        transparent 60%
+      );
+  }
+
+  /* 縦書き装飾テキスト（PCのみ） */
+  .hero-vertical {
+    position: absolute;
+    top: 50%;
+    right: 52px;
+    transform: translateY(-50%);
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    font-family: 'Shippori Mincho B1', serif;
+    font-size: 0.85rem;
+    font-weight: 400;
+    letter-spacing: 0.32em;
+    color: rgba(255, 255, 255, 0.52);
+    z-index: 3;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.6);
+    line-height: 1;
+    user-select: none;
+  }
+  @media (max-width: 880px) { .hero-vertical { display: none; } }
+
+  /* メインコンテンツ */
+  .hero-body {
+    position: relative;
+    z-index: 2;
+    padding: 0 68px 88px;
+    max-width: 1000px;
+  }
+  @media (max-width: 768px) { .hero-body { padding: 0 24px 72px; } }
+
+  .hero-eyebrow {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 0.88rem;
+    color: rgba(255,255,255,0.65);
+    letter-spacing: 0.38em;
+    display: block;
+    margin-bottom: 1.4rem;
+  }
+
+  .hero h1 {
+    font-family: 'Shippori Mincho B1', serif;
+    font-size: clamp(2.1rem, 5.4vw, 4.4rem);
+    font-weight: 800;
+    line-height: 1.38;
+    color: #fff;
+    text-shadow: 2px 6px 28px rgba(0,0,0,0.6), 0 2px 6px rgba(0,0,0,0.4);
+    margin-bottom: 1.6rem;
+  }
+
+  .hero-lead {
+    font-family: 'Noto Serif JP', serif;
+    font-size: clamp(0.9rem, 1.6vw, 1.08rem);
+    color: rgba(255,255,255,0.80);
+    line-height: 2.0;
+    max-width: 580px;
+    margin-bottom: 2.6rem;
+  }
+
+  /* メタ情報バー */
+  .hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    border-top: 1px solid rgba(255,255,255,0.18);
+    padding-top: 1.6rem;
+    margin-bottom: 2.4rem;
+  }
+  .hero-meta-item {
+    padding: 0 32px 0 0;
+    margin-right: 32px;
+    border-right: 1px solid rgba(255,255,255,0.18);
+  }
+  .hero-meta-item:last-child { border-right: none; padding-right: 0; margin-right: 0; }
+  .hero-meta-label {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 0.68rem;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.52);
+    display: block;
+    margin-bottom: 5px;
+  }
+  .hero-meta-value {
+    font-family: 'Shippori Mincho B1', serif;
+    font-size: 0.96rem;
+    font-weight: 600;
+    color: #fff;
+    display: block;
+  }
+  .hero-meta-value.free { font-size: 1.55rem; color: var(--gold); letter-spacing: 0.06em; }
+
+  /* CTAボタン */
+  .hero-cta-wrap { display: flex; flex-direction: column; align-items: flex-start; gap: 0.8rem; }
+  .btn-hero {
+    display: inline-block;
+    background: var(--terra);
+    color: #fff;
+    font-family: 'Shippori Mincho B1', serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    padding: 18px 52px;
+    border-radius: 50px;
+    text-decoration: none;
+    box-shadow: 0 8px 32px rgba(196,99,74,0.5);
+    transition: background 0.3s, transform 0.3s, box-shadow 0.3s;
+  }
+  .btn-hero:hover {
+    background: #D47558;
+    transform: translateY(-3px);
+    box-shadow: 0 14px 44px rgba(196,99,74,0.6);
+  }
+  .hero-cta-note {
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.5);
+    letter-spacing: 0.06em;
+  }
+
+  /* スクロール誘導 */
+  .hero-scroll {
+    position: absolute;
+    bottom: 32px;
+    right: 56px;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: rgba(255,255,255,0.45);
+  }
+  @media (max-width: 880px) { .hero-scroll { right: 24px; } }
+  .hero-scroll span {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.38em;
+    text-transform: uppercase;
+  }
+  .scroll-tick {
+    width: 1px;
+    height: 44px;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.6), transparent);
+    animation: tickDown 2s ease-in-out infinite;
+  }
+  @keyframes tickDown {
+    0%,100% { opacity:0.4; transform:scaleY(1); transform-origin:top; }
+    50%      { opacity:1;   transform:scaleY(0.6); }
+  }
+
+  /* ═══════════════════════════════════════
+     SHARED UTILITIES
+  ═══════════════════════════════════════ */
+  .wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 52px;
+  }
+  @media (max-width: 768px) { .wrap { padding: 0 24px; } }
+
+  .sec-label {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 0.84rem;
+    letter-spacing: 0.36em;
+    color: var(--terra);
+    display: block;
+    margin-bottom: 1.3rem;
+  }
+
+  /* Reveal アニメーション */
+  .r {
+    opacity: 0;
+    transform: translateY(38px);
+    transition: opacity 0.9s cubic-bezier(0.22,1,0.36,1),
+                transform 0.9s cubic-bezier(0.22,1,0.36,1);
+  }
+  .r.on { opacity: 1; transform: translateY(0); }
+  .r1 { transition-delay: 0.10s; }
+  .r2 { transition-delay: 0.20s; }
+  .r3 { transition-delay: 0.30s; }
+  .r4 { transition-delay: 0.40s; }
+  .r5 { transition-delay: 0.50s; }
+
+  /* ═══════════════════════════════════════
+     SECTION: EMPATHY
+  ═══════════════════════════════════════ */
+  .sec-empathy {
+    padding: 150px 0 130px;
+    background: var(--cream);
+    position: relative;
+  }
+  .sec-empathy::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--parchment), transparent);
+  }
+
+  .empathy-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 100px;
+    align-items: center;
+  }
+  @media (max-width: 880px) { .empathy-grid { grid-template-columns: 1fr; gap: 56px; } }
+
+  .empathy-text h2 {
+    font-family: 'Shippori Mincho B1', serif;
+    font-size: clamp(1.4rem, 2.7vw, 2.1rem);
+    font-weight: 700;
+    line-height: 1.65;
+    color: var(--ink);
+    margin-bottom: 2rem;
+  }
+  .empathy-text p {
+    font-size: 1rem;
+    line-height: 2.15;
+    color: var(--brown);
+    margin-bottom: 1.7rem;
+  }
+  .empathy-text p:last-child { margin-bottom: 0; }
+
+  /* 有機的な写真群 */
+  .empathy-photos {
+    position: relative;
+    height: 520px;
+  }
+  @media (max-width: 880px) { .empathy-photos { display: none; } }
+
+  .ep-a {
+    position: absolute;
+    top: 0; left: 0;
+    width: 76%;
+    height: 390px;
+    /* アーチ型 */
+    border-radius: 55% 45% 48% 52% / 60% 60% 40% 40%;
+    overflow: hidden;
+    box-shadow: 16px 24px 60px var(--shadow);
+  }
+  .ep-b {
+    position: absolute;
+    bottom: 0; right: 0;
+    width: 52%;
+    height: 260px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 8px solid var(--cream);
+    box-shadow: 8px 14px 38px var(--shadow);
+  }
+  .ep-a img, .ep-b img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    filter: contrast(1.06) brightness(0.92) saturate(1.14) sepia(0.08);
+  }
+  .ep-deco {
+    position: absolute;
+    bottom: 100px; left: -10px;
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 0.82rem;
+    writing-mode: vertical-rl;
+    color: var(--terra);
+    opacity: 0.4;
+    letter-spacing: 0.2em;
+  }
+
+  /* ═══════════════════════════════════════
+     SECTION: BENEFITS
+  ═══════════════════════════════════════ */
+  .sec-benefits {
+    padding: 130px 0 120px;
+    background: var(--beige);
+    clip-path: polygon(0 56px, 100% 0, 100% calc(100% - 56px), 0 100%);
+    position: relative;
+  }
+
+  .benefits-head {
+    max-width: 680px;
+    margin: 0 auto 80px;
+    text-align: center;
+  }
+  .benefits-head h2 {
+    font-family: 'Shippori Mincho B1', serif;
+    font-size: clamp(1.4rem, 2.7vw, 2.1rem);
+    font-weight: 700;
+    line-height: 1.65;
+    color: var(--ink);
+  }
+
+  /* 非対称2カラムグリッド */
+  .benefits-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px 56px;
+  }
+  @media (max-width: 880px) { .benefits-layout { grid-template-columns: 1fr; gap: 36px; } }
+
+  .benefit-item {
+    background: var(--cream);
+    border-radius: 20px;
+    padding: 44px 40px 42px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 3px 18px rgba(34,18,6,0.06);
+    transition: transform 0.32s ease, box-shadow 0.32s ease;
+  }
+  .benefit-item:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 14px 44px rgba(34,18,6,0.13);
+  }
+  /* 大きな数字の装飾 */
+  .benefit-item::before {
+    content: attr(data-n);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 5.5rem;
+    font-weight: 300;
+    color: var(--terra);
+    opacity: 0.12;
+    position: absolute;
+    top: 8px; right: 18px;
+    line-height: 1;
+    pointer-events: none;
+  }
+  /* カラーバー */
+  .benefit-item::after {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: linear-gradient(to bottom, var(--terra), var(--mustard));
+    border-radius: 3px 0 0 3px;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .benefit-item:hover::after { opacity: 1; }
+
+  .benefit-item p {
+    font-size: 0.96rem;
+    line-height: 2.05;
+    color: var(--brown);
+    position: relative;
+    z-index: 1;
+  }
+
+  /* 最後のアイテム：プレースホルダー */
+  .benefit-placeholder {
+    font-style: italic;
+    color: var(--warm-gray);
+    border-left: 3px solid var(--terra-pale);
+    padding-left: 16px;
+    font-size: 0.95rem;
+    line-height: 1.9;
+  }
+
+  /* 締め文 */
+  .benefits-closing {
+    margin-top: 72px;
+    text-align: center;
+  }
+  .benefits-closing p {
+    font-size: 1.06rem;
+    line-height: 2.15;
+    color: var(--brown);
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  /* ═══════════════════════════════════════
+     SECTION: VOICES
+  ═══════════════════════════════════════ */
+  .sec-voices {
+    padding: 150px 0 130px;
+    background: var(--cream);
+  }
+
+  .voices-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    align-items: start;
+  }
+  @media (max-width: 880px) { .voices-grid { grid-template-columns: 1fr; gap: 52px; } }
+
+  /* ポラロイド風写真群 */
+  .voices-photos {
+    position: relative;
+    height: 540px;
+  }
+  @media (max-width: 880px) { .voices-photos { display: none; } }
+
+  .pol {
+    position: absolute;
+    background: #fffdf9;
+    padding: 11px 11px 44px;
+    box-shadow: 4px 10px 30px rgba(34,18,6,0.22);
+  }
+  .pol img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    filter: sepia(0.14) saturate(1.12) brightness(0.93);
+  }
+  .pol-a { top:0; left:10px; width:215px; height:270px; transform:rotate(-4.2deg); }
+  .pol-b { top:60px; right:0; width:200px; height:252px; transform:rotate(3.8deg); }
+  .pol-c { bottom:0; left:80px; width:190px; height:240px; transform:rotate(-1.6deg); }
+
+  .voices-text h2 {
+    font-family: 'Shippori Mincho B1', serif;
+    font-size: clamp(1.4rem, 2.7vw, 2.1rem);
+    font-weight: 700;
+    line-height: 1.65;
+    color: var(--ink);
+    margin-bottom: 2rem;
+  }
+
+  .placeholder-box {
+    background: var(--beige);
+    border-left: 3px solid var(--terra);
+    border-radius: 0 12px 12px 0;
+    padding: 16px 22px;
+    margin-bottom: 2rem;
+    font-style: italic;
+    color: var(--warm-gray);
+    font-size: 0.95rem;
+    line-height: 1.9;
+  }
+
+  .voices-close {
+    font-size: 1.05rem;
+    font-weight: 500;
+    line-height: 1.9;
+    color: var(--ink);
+  }
+
+  /* ═══════════════════════════════════════
+     SECTION: SPEAKER
+  ═══════════════════════════════════════ */
+  .sec-speaker {
+    padding: 130px 0 120px;
+    background: var(--parchment);
+    clip-path: polygon(0 0, 100% 56px, 100% 100%, 0 calc(100% - 56px));
+  }
+
+  .speaker-grid {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 96px;
+    align-items: center;
+  }
+  @media (max-width: 880px) { .speaker-grid { grid-template-columns: 1fr; gap: 52px; } }
+
+  .speaker-frame-wrap {
+    position: relative;
+  }
+  /* アーチ型フレーム */
+  .speaker-frame {
+    width: 100%;
+    aspect-ratio: 3/4.1;
+    border-radius: 50% 50% 10px 10px / 44% 44% 10px 10px;
+    overflow: hidden;
+    box-shadow: 20px 28px 68px var(--shadow);
+  }
+  .speaker-frame img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    filter: contrast(1.06) brightness(0.94) saturate(1.1) sepia(0.06);
+  }
+  .speaker-ring {
+    position: absolute;
+    top: -24px; left: -24px;
+    width: 88px; height: 88px;
+    border-radius: 50%;
+    border: 2px solid var(--terra);
+    opacity: 0.22;
+    pointer-events: none;
+  }
+  .speaker-blob {
+    position: absolute;
+    bottom: -28px; right: -28px;
+    width: 140px; height: 140px;
+    border-radius: 50%;
+    background: var(--green);
+    opacity: 0.11;
+    pointer-events: none;
+  }
+
+  .speaker-text h2 {
+    font-family: 'Shippori Mincho B1', serif;
+    font-size: clamp(1.4rem, 2.5vw, 2rem);
+    font-weight: 700;
+    line-height: 1.65;
+    color: var(--ink);
+    margin-bottom: 2rem;
+  }
+  .speaker-text p {
+    font-size: 1rem;
+    line-height: 2.15;
+    color: var(--brown);
+    margin-bottom: 1.5rem;
+  }
+  .speaker-text p:last-child { margin-bottom: 0; }
+
+  /* ═══════════════════════════════════════
+     SECTION: DETAILS + CTA
+  ═══════════════════════════════════════ */
+  .sec-details {
+    padding: 150px 0 130px;
+    background: var(--cream);
+  }
+
+  .details-grid {
+    display: grid;
+    grid-template-columns: 1fr 460px;
+    gap: 90px;
+    align-items: start;
+  }
+  @media (max-width: 880px) { .details-grid { grid-template-columns: 1fr; gap: 64px; } }
+
+  .details-left h2 {
+    font-family: 'Shippori Mincho B1', serif;
+    font-size: clamp(1.4rem, 2.5vw, 2rem);
+    font-weight: 700;
+    line-height: 1.65;
+    color: var(--ink);
+    margin-bottom: 1.8rem;
+  }
+  .details-left > p {
+    font-size: 1rem;
+    line-height: 2.15;
+    color: var(--brown);
+    margin-bottom: 3.2rem;
+  }
+
+  /* イベント詳細テーブル */
+  .event-tbl { width: 100%; border-collapse: collapse; }
+  .event-tbl tr { border-bottom: 1px solid var(--beige); }
+  .event-tbl tr:last-child { border-bottom: none; }
+  .event-tbl th {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--warm-gray);
+    padding: 18px 0;
+    text-align: left;
+    width: 108px;
+    vertical-align: top;
+    white-space: nowrap;
+  }
+  .event-tbl td {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 0.95rem;
+    color: var(--ink);
+    padding: 18px 0;
+    line-height: 1.8;
+    vertical-align: top;
+  }
+  .badge-free {
+    display: inline-block;
+    background: var(--terra);
+    color: #fff;
+    font-family: 'Shippori Mincho B1', serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    padding: 3px 20px 4px;
+    border-radius: 4px;
+  }
+
+  /* CTAボックス */
+  .cta-box {
+    background: var(--green);
+    border-radius: 26px;
+    padding: 64px 52px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .cta-box::before {
+    content: '';
+    position: absolute;
+    top:-80px; right:-80px;
+    width: 230px; height: 230px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.04);
+    pointer-events: none;
+  }
+  .cta-box::after {
+    content: '';
+    position: absolute;
+    bottom:-60px; left:-60px;
+    width: 190px; height: 190px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.035);
+    pointer-events: none;
+  }
+  .cta-eyebrow {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 0.82rem;
+    letter-spacing: 0.36em;
+    color: rgba(255,255,255,0.52);
+    display: block;
+    margin-bottom: 1.6rem;
+  }
+  .cta-box h3 {
+    font-family: 'Shippori Mincho B1', serif;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.72;
+    margin-bottom: 1.8rem;
+  }
+  .cta-price {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2.9rem;
+    font-weight: 300;
+    color: var(--gold);
+    letter-spacing: 0.14em;
+    display: block;
+    margin-bottom: 2.6rem;
+  }
+  .btn-cta {
+    display: inline-block;
+    background: var(--terra);
+    color: #fff;
+    font-family: 'Shippori Mincho B1', serif;
+    font-size: 1.08rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    padding: 20px 54px;
+    border-radius: 50px;
+    text-decoration: none;
+    box-shadow: 0 8px 36px rgba(196,99,74,0.5);
+    transition: background 0.3s, transform 0.3s, box-shadow 0.3s;
+    position: relative;
+    z-index: 1;
+  }
+  .btn-cta:hover {
+    background: #D47558;
+    transform: translateY(-4px);
+    box-shadow: 0 16px 48px rgba(196,99,74,0.6);
+  }
+  .cta-note {
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.48);
+    margin-top: 1.8rem;
+    line-height: 1.9;
+  }
+
+  /* ═══════════════════════════════════════
+     FOOTER
+  ═══════════════════════════════════════ */
+  footer {
+    background: var(--ink);
+    padding: 44px;
+    text-align: center;
+    color: rgba(255,255,255,0.3);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 0.78rem;
+    letter-spacing: 0.18em;
+  }
+
+  /* ═══════════════════════════════════════
+     MOBILE ADJUSTMENTS
+  ═══════════════════════════════════════ */
+  @media (max-width: 768px) {
+    .sec-benefits { clip-path: polygon(0 32px, 100% 0, 100% calc(100% - 32px), 0 100%); }
+    .sec-speaker  { clip-path: polygon(0 0, 100% 32px, 100% 100%, 0 calc(100% - 32px)); }
+    .cta-box { padding: 44px 28px; }
+  }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════
+     HERO
+══════════════════════════════════ -->
+<header class="hero">
+  <div class="hero-bg">
+    <img
+      id="heroBgImg"
+      src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=1800&auto=format&fit=crop&q=80"
+      alt="笑顔でパソコンに向かう女性、温かい光の中で"
+    />
+  </div>
+  <div class="hero-overlay"></div>
+
+  <!-- 縦書き装飾テキスト（PCのみ・原稿から抜粋） -->
+  <div class="hero-vertical">長年の経験と知恵を活かし、第二の人生で輝くための第一歩を踏み出しましょう</div>
+
+  <div class="hero-body">
+    <span class="hero-eyebrow">Free Online Seminar</span>
+    <h1>50代からの新しい挑戦！<br>地域を彩るWebサイトを、<br>あなたの手で簡単に<br>創り出す感動を体験しませんか？</h1>
+    <p class="hero-lead">長年の経験と知恵を活かし、第二の人生で輝くための第一歩を踏み出しましょう。本セミナーはオンラインで開催され、Webサイト制作に興味のある50代後半の定年退職者の方々を対象としています。</p>
+
+    <div class="hero-meta">
+      <div class="hero-meta-item">
+        <span class="hero-meta-label">Format</span>
+        <span class="hero-meta-value">オンライン開催</span>
+      </div>
+      <div class="hero-meta-item">
+        <span class="hero-meta-label">Entrance Fee</span>
+        <span class="hero-meta-value free">無　料</span>
+      </div>
+      <div class="hero-meta-item">
+        <span class="hero-meta-label">Target</span>
+        <span class="hero-meta-value">50代後半の定年退職者</span>
+      </div>
+    </div>
+
+    <div class="hero-cta-wrap">
+      <a href="https://empathywriting.com/tools/landypro/#" class="btn-hero">今すぐ席を確保する</a>
+      <span class="hero-cta-note">お申し込みは1分で完了します</span>
+    </div>
+  </div>
+
+  <div class="hero-scroll">
+    <span>Scroll</span>
+    <div class="scroll-tick"></div>
+  </div>
+</header>
+
+
+<!-- ══════════════════════════════════
+     EMPATHY
+══════════════════════════════════ -->
+<section class="sec-empathy">
+  <div class="wrap">
+    <div class="empathy-grid">
+
+      <div class="empathy-text r">
+        <span class="sec-label">Empathy</span>
+        <h2>「若い人たちに頼りっぱなし…」そんなもどかしさから解放され、あなたのアイデアを形にする喜びを掴みませんか？</h2>
+        <p>地域活動のWebサイトを立ち上げたいと心に秘めながらも、パソコン操作の複雑さに尻込みし、いつも若い世代に頼んでしまう。そんな時、「もし自分でできたら…」と、ふと寂しさを感じたことはありませんか？あなたの豊かな経験と情熱を、デジタルな世界で表現できないことに、もったいなさを感じているかもしれません。</p>
+        <p>このセミナーに参加すれば、もう誰かに遠慮することはありません。あなたのアイデアが、あなたの手で、鮮やかなWebサイトとして形になり始める感動を味わえるでしょう。これまで抱えていた「できない」という壁が、少しずつ「できる」という喜びに変わっていくのを実感できます。</p>
+      </div>
+
+      <div class="empathy-photos r r2">
+        <div class="ep-a">
+          <img src="https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=800&auto=format&fit=crop&q=80"
+               alt="ノートパソコンで作業に取り組む様子" />
+        </div>
+        <div class="ep-b">
+          <img src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=600&auto=format&fit=crop&q=80"
+               alt="地域の人々が笑顔で集まる温かな場面" />
+        </div>
+        <span class="ep-deco">New Challenge</span>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════
+     BENEFITS
+══════════════════════════════════ -->
+<section class="sec-benefits">
+  <div class="wrap">
+
+    <div class="benefits-head r">
+      <span class="sec-label">Programme</span>
+      <h2>あなたの情熱がWebサイトとして花開く！セミナーで手に入れる具体的な未来</h2>
+    </div>
+
+    <div class="benefits-layout">
+      <div class="benefit-item r"    data-n="01"><p>地域活動の魅力を最大限に引き出す、あなただけのオリジナルWebサイトを「ゼロから」作り上げる具体的な手順が明確になります。</p></div>
+      <div class="benefit-item r r1" data-n="02"><p>専門知識がなくても大丈夫。直感的に操作できるツールを使いこなし、まるで絵を描くようにWebサイトをデザインする喜びを体験できます。</p></div>
+      <div class="benefit-item r r2" data-n="03"><p>Webサイトを通じて、地域の人々との新たな繋がりを生み出し、あなたの活動がより多くの人々に届くようになるでしょう。</p></div>
+      <div class="benefit-item r r3" data-n="04"><p>パソコン操作への苦手意識が自信へと変わり、デジタルスキルを身につけることで、第二の人生の選択肢が無限に広がります。</p></div>
+      <div class="benefit-item r r4" data-n="05"><p class="benefit-placeholder">[セミナー内容の詳細をここに挿入してください]</p></div>
+    </div>
+
+    <div class="benefits-closing r">
+      <p>これらの学びは、単なる知識に留まりません。あなたの心に眠る創造性を呼び覚まし、Webサイト制作という新たな表現の場を通じて、あなたの人生をさらに豊かに彩る確かな一歩となるでしょう。</p>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════
+     VOICES
+══════════════════════════════════ -->
+<section class="sec-voices">
+  <div class="wrap">
+    <div class="voices-grid">
+
+      <div class="voices-photos r">
+        <div class="pol pol-a">
+          <img src="https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=400&auto=format&fit=crop&q=80"
+               alt="セミナー参加者が笑顔でパソコンを操作している様子" />
+        </div>
+        <div class="pol pol-b">
+          <img src="https://images.unsplash.com/photo-1544717305-2782549b5136?w=400&auto=format&fit=crop&q=80"
+               alt="ノートパソコンを前に学ぶ女性" />
+        </div>
+        <div class="pol pol-c">
+          <img src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400&auto=format&fit=crop&q=80"
+               alt="オンラインセミナーに参加する様子" />
+        </div>
+      </div>
+
+      <div class="voices-text r r1">
+        <span class="sec-label">Voices</span>
+        <h2>「私にもできた！」参加者の声が語る、感動のビフォーアフター</h2>
+        <div class="placeholder-box">[参加者の声・満足度をここに挿入してください]</div>
+        <p class="voices-close">多くの参加者が、このセミナーをきっかけに新たな可能性を見出し、自信を持ってWebサイト制作に取り組んでいます。次は、あなたの番です。この感動を、ぜひご自身の肌で感じてください。</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════
+     SPEAKER
+══════════════════════════════════ -->
+<section class="sec-speaker">
+  <div class="wrap">
+    <div class="speaker-grid">
+
+      <div class="speaker-frame-wrap r">
+        <div class="speaker-frame">
+          <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?w=600&auto=format&fit=crop&q=80"
+               alt="情熱的な表情の登壇者" />
+        </div>
+        <div class="speaker-ring"></div>
+        <div class="speaker-blob"></div>
+      </div>
+
+      <div class="speaker-text r r1">
+        <span class="sec-label">Navigator</span>
+        <h2>あなたの「できる！」を全力でサポートする、情熱のナビゲーター</h2>
+        <div class="placeholder-box">[登壇者プロフィールをここに挿入してください]</div>
+        <p>長年の経験と、多くの受講生を成功に導いてきた実績を持つ私が、あなたのWebサイト制作への情熱を全力で応援します。年齢や経験は関係ありません。あなたの「やってみたい」という気持ちを、確かな形に変えるお手伝いをさせてください。このセミナーが、あなたの第二の人生を輝かせる最高のきっかけとなることを心から願っています。</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════
+     DETAILS + CTA
+══════════════════════════════════ -->
+<section class="sec-details">
+  <div class="wrap">
+    <div class="details-grid">
+
+      <div class="details-left r">
+        <span class="sec-label">Details</span>
+        <h2>あなたの未来を拓く特別な時間</h2>
+        <p>このセミナーは、あなたの情熱をWebサイトという形に変えるための、かけがえのない投資となるでしょう。新しいスキルを身につけ、地域に貢献する喜びを味わう。その価値は、計り知れません。</p>
+
+        <table class="event-tbl">
+          <tr>
+            <th>日時</th>
+            <td><span style="font-style:italic;color:var(--warm-gray);">[開催日時をここに挿入してください]</span></td>
+          </tr>
+          <tr>
+            <th>場所</th>
+            <td>オンライン（お申し込み後、参加URLをお送りします）</td>
+          </tr>
+          <tr>
+            <th>定員</th>
+            <td><span style="font-style:italic;color:var(--warm-gray);">[定員をここに挿入してください]</span>名</td>
+          </tr>
+          <tr>
+            <th>参加費</th>
+            <td><span class="badge-free">無　料</span></td>
+          </tr>
+          <tr>
+            <th>持ち物</th>
+            <td>インターネットに接続できるパソコン</td>
+          </tr>
+          <tr>
+            <th>参加条件</th>
+            <td>Webサイト制作に興味のある50代後半の定年退職者の方</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="cta-box r r1">
+        <span class="cta-eyebrow">Join Us</span>
+        <h3>あなたのアイデアを、<br>あなたの手で形にする<br>感動を体験しませんか？</h3>
+        <span class="cta-price">参加費　無料</span>
+        <a href="https://empathywriting.com/tools/landypro/#" class="btn-cta">今すぐ席を確保する</a>
+        <p class="cta-note">お申し込みは1分で完了します。<br>ご都合が合わなくなった場合はキャンセル可能ですので、ご安心ください。</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<footer>
+  <p>50代からのWebサイト制作体験セミナー &nbsp;|&nbsp; Online &amp; Free</p>
+</footer>
+
+
+<script>
+  // ── ヒーロー背景：ロード後にズームアウト解除 ──
+  const heroImg = document.getElementById('heroBgImg');
+  heroImg.onload = () => heroImg.classList.add('loaded');
+  if (heroImg.complete) heroImg.classList.add('loaded');
+
+  // ── ヒーロー：スクロール視差 ──
+  const heroBg = document.querySelector('.hero-bg img');
+  let ticking = false;
+  window.addEventListener('scroll', () => {
+    if (!ticking) {
+      requestAnimationFrame(() => {
+        const y = window.scrollY;
+        if (y < window.innerHeight * 1.2) {
+          heroBg.style.transform = `scale(1) translateY(${y * 0.22}px)`;
+        }
+        ticking = false;
+      });
+      ticking = true;
+    }
+  }, { passive: true });
+
+  // ── IntersectionObserver でリビール ──
+  const revealEls = document.querySelectorAll('.r');
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('on');
+        io.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.11, rootMargin: '0px 0px -50px 0px' });
+  revealEls.forEach(el => io.observe(el));
+</script>
+</body>
+</html>
