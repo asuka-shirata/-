@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI集客・マーケティング支援ダッシュボード｜買取店向け</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: { sans: ['"Noto Sans JP"', 'sans-serif'] },
+        colors: {
+          navy: { 50:'#f0f4f8',100:'#dbe4ee',200:'#b7c9dd',300:'#8ea9c6',400:'#5d80a3',500:'#3d5f80',600:'#2c4763',700:'#233a50',800:'#1c2e40',900:'#162432' },
+          gold: { 50:'#fdf8ec',100:'#faedc7',200:'#f4da8c',300:'#edc255',400:'#e3a72e',500:'#c98c1c',600:'#a56f16',700:'#7d5412' },
+        },
+        boxShadow: {
+          card: '0 2px 10px -2px rgba(22,36,50,0.08), 0 8px 24px -8px rgba(22,36,50,0.10)',
+        }
+      }
+    }
+  }
+</script>
+<style>
+  * { font-family: 'Noto Sans JP', sans-serif; }
+  body { background: #f4f6f9; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  .fade-up { animation: fadeUp .35s ease-out both; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner { animation: spin 0.8s linear infinite; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useMemo } = React;
+
+/* ---------------------------------------------------------
+   マスターデータ
+--------------------------------------------------------- */
+const MATERIALS = [
+  { id: "watch", label: "ブランド時計", kw: ["ロレックス", "オメガ", "高級腕時計"] },
+  { id: "jewelry", label: "貴金属・ジュエリー", kw: ["金", "プラチナ", "ダイヤモンド"] },
+  { id: "kimono", label: "着物・骨董品", kw: ["着物", "骨董品", "茶道具"] },
+  { id: "bag", label: "ブランドバッグ", kw: ["エルメス", "シャネル", "ルイ・ヴィトン"] },
+  { id: "coin", label: "切手・古銭", kw: ["切手", "古銭", "記念硬貨"] },
+  { id: "instrument", label: "楽器", kw: ["ピアノ", "ギター", "管楽器"] },
+];
+
+const AUDIENCES = [
+  {
+    id: "senior",
+    label: "生前整理を考えるシニア層",
+    tone: "安心感・丁寧さ",
+    benefits: ["ご自宅にお伺いする出張査定", "難しい手続きは一切不要", "ご家族にも安心の実績"],
+  },
+  {
+    id: "souzoku",
+    label: "相続・遺品整理のご家族",
+    tone: "寄り添い・信頼",
+    benefits: ["まとめて一括査定OK", "遠方のご実家にも対応", "供養・処分のご相談も可能"],
+  },
+  {
+    id: "kimono2",
+    label: "着物・和装品を手放したい方",
+    tone: "専門性・こだわり",
+    benefits: ["着物専門の鑑定士が査定", "シミ・汚れがあっても査定可", "証紙がなくても大丈夫"],
+  },
+  {
+    id: "housewife",
+    label: "ブランド品を売りたい主婦層",
+    tone: "お得感・気軽さ",
+    benefits: ["最短即日で現金化", "LINEで写真査定OK", "スキマ時間に自宅から申込み"],
+  },
+  {
+    id: "move",
+    label: "断捨離・引っ越しを控えた方",
+    tone: "スピード感",
+    benefits: ["最短即日の出張対応", "不用品もまとめて査定", "大量点数でも一度に完結"],
+  },
+];
+
+const AXES = ["接客の丁寧さ", "査定スピード", "査定額の納得感", "店舗の清潔感", "手続きの分かりやすさ"];
+
+/* ---------------------------------------------------------
+   共通 UI パーツ
+--------------------------------------------------------- */
+function SectionCard({ children, className = "" }) {
+  return <div className={`bg-white rounded-2xl shadow-card border border-navy-100 ${className}`}>{children}</div>;
+}
+
+function Badge({ children, color = "gold" }) {
+  const styles = {
+    gold: "bg-gold-100 text-gold-700",
+    navy: "bg-navy-100 text-navy-700",
+    green: "bg-emerald-100 text-emerald-700",
+  };
+  return <span className={`inline-block text-xs font-bold px-2.5 py-1 rounded-full ${styles[color]}`}>{children}</span>;
+}
+
+function PrimaryButton({ children, onClick, loading, disabled, className = "" }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled || loading}
+      className={`inline-flex items-center gap-2 bg-navy-700 hover:bg-navy-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold px-6 py-3 rounded-xl shadow-card transition-colors ${className}`}
+    >
+      {loading && (
+        <svg className="spinner w-4 h-4" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.25" />
+          <path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+        </svg>
+      )}
+      {loading ? "AIが生成中..." : children}
+    </button>
+  );
+}
+
+function CopyButton({ text }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    try {
+      navigator.clipboard.writeText(text);
+    } catch (e) {}
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  return (
+    <button
+      onClick={handleCopy}
+      className="text-xs font-bold px-3 py-1.5 rounded-lg border border-navy-200 text-navy-600 hover:bg-navy-50 transition-colors shrink-0"
+    >
+      {copied ? "コピーしました！" : "コピー"}
+    </button>
+  );
+}
+
+function EmptyState({ icon, text }) {
+  return (
+    <div className="flex flex-col items-center justify-center text-center py-16 px-6 text-navy-300">
+      <div className="text-5xl mb-3">{icon}</div>
+      <p className="text-sm text-navy-400 max-w-xs">{text}</p>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------
+   CTA モーダル（ダミー予約）
+--------------------------------------------------------- */
+function CtaModal({ onClose }) {
+  return (
+    <div className="fixed inset-0 bg-navy-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-7 fade-up" onClick={(e) => e.stopPropagation()}>
+        <div className="w-14 h-14 rounded-full bg-gold-100 flex items-center justify-center text-3xl mb-4">📅</div>
+        <h3 className="text-lg font-black text-navy-800 mb-2">無料オンラインカウンセリング</h3>
+        <p className="text-sm text-navy-500 leading-relaxed mb-6">
+          こちらは機能デモ版のため、実際の予約フォームには接続していません。本番環境では、この導線から専任コンサルタントとの無料相談カレンダーに遷移します。
+        </p>
+        <button onClick={onClose} className="w-full bg-navy-700 hover:bg-navy-800 text-white font-bold py-3 rounded-xl transition-colors">
+          閉じる
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------
+   ヘッダー
+--------------------------------------------------------- */
+function Header({ onCtaClick }) {
+  return (
+    <header className="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-navy-100">
+      <div className="max-w-6xl mx-auto px-5 py-4 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-navy-700 text-gold-300 flex items-center justify-center font-black text-lg shrink-0">AI</div>
+          <div>
+            <p className="font-black text-navy-800 leading-tight text-base sm:text-lg">買取店向け AI集客ダッシュボード</p>
+            <p className="text-[11px] sm:text-xs text-navy-400 leading-tight">折込・SEO・MEO・口コミ分析をAIがまるごとサポート</p>
+          </div>
+        </div>
+        <button
+          onClick={onCtaClick}
+          className="shrink-0 bg-gold-500 hover:bg-gold-600 text-white font-bold text-xs sm:text-sm px-3.5 sm:px-5 py-2.5 rounded-xl shadow-card transition-colors"
+        >
+          無料オンライン<span className="hidden sm:inline">カウンセリングを</span>予約する
+        </button>
+      </div>
+    </header>
+  );
+}
+
+/* ---------------------------------------------------------
+   タブナビ
+--------------------------------------------------------- */
+const TABS = [
+  { id: "seo", label: "MEO・SEO記事生成", icon: "📝" },
+  { id: "flyer", label: "チラシキャッチコピー", icon: "🎯" },
+  { id: "analysis", label: "競合・口コミ分析", icon: "📊" },
+];
+
+function TabNav({ active, onChange }) {
+  return (
+    <div className="max-w-6xl mx-auto px-5 pt-6">
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => onChange(t.id)}
+            className={`flex items-center gap-2 px-4 sm:px-5 py-3 rounded-xl font-bold text-sm whitespace-nowrap transition-colors border ${
+              active === t.id
+                ? "bg-navy-700 text-white border-navy-700 shadow-card"
+                : "bg-white text-navy-500 border-navy-100 hover:border-navy-300"
+            }`}
+          >
+            <span>{t.icon}</span>
+            {t.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------
+   機能1: MEO・SEOコンテンツ自動生成
+--------------------------------------------------------- */
+function buildSeoResult(material, region) {
+  const r = region || "◯◯市";
+  const m = material.label;
+  const kw = material.kw;
+
+  const headings = [
+    { h: `${m}の買取相場はどのくらい？価格を決める5つの基準`, intent: "情報収集" },
+    { h: `${r}で${m}を売るときに失敗しないための注意点`, intent: "情報収集" },
+    { h: `出張査定・宅配査定・店舗持込み、${r}エリアではどれが便利？`, intent: "比較検討" },
+    { h: `${r}で選ばれる買取店の3つの特徴とは`, intent: "比較検討" },
+    { h: `${m}を高く売るために査定前にやっておきたい準備`, intent: "情報収集" },
+    { h: `よくあるご質問（査定額・手数料・キャンセルについて）`, intent: "不安解消" },
+  ];
+
+  const targetKeywords = [
+    `${r} ${m} 買取`,
+    `${m} 買取 相場`,
+    `${r} 出張買取`,
+    `${m} 高く売る`,
+  ];
+
+  const gbpPosts = [
+    `【${r}の皆様へ】${m}の無料査定、本日も受付中です🍀\n「価値がわからない」「相場を知りたい」という方もお気軽にどうぞ。経験豊富な鑑定士が丁寧に査定いたします。出張査定も対応可能です。まずはお気軽にご相談ください。`,
+    `${r}で${m}の買取なら当店にお任せください✨\nおかげさまで累計査定件数は地域トップクラス。${kw[0]}をはじめ幅広く高価買取中です。無料相談・キャンセル料一切なし。まずは写真を送るだけの簡単査定からどうぞ。`,
+    `「${m}、そのままにしていませんか？」\n${r}エリア出張無料、即日現金化も可能です。ご自宅に眠ったままの${kw[1]}や${kw[2]}、この機会にプロの目で価値を確かめてみませんか。ご相談だけでも大歓迎です。`,
+  ];
+
+  return {
+    title: `【${r}】${m}を高く売るなら？買取相場と失敗しない業者選びのポイント`,
+    headings,
+    targetKeywords,
+    charCount: "2,200〜2,800字",
+    gbpPosts,
+  };
+}
+
+function SeoTab() {
+  const [materialId, setMaterialId] = useState(MATERIALS[0].id);
+  const [region, setRegion] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const generate = () => {
+    setLoading(true);
+    setResult(null);
+    const material = MATERIALS.find((m) => m.id === materialId);
+    setTimeout(() => {
+      setResult(buildSeoResult(material, region.trim()));
+      setLoading(false);
+    }, 1100);
+  };
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-6">
+      <SectionCard className="p-6 h-fit">
+        <h2 className="font-black text-navy-800 mb-1">MEO・SEOコンテンツ自動生成</h2>
+        <p className="text-xs text-navy-400 mb-5">強化したい商材と地域名を入力すると、検索意図に沿ったブログ構成案とGoogleビジネスプロフィール投稿文をAIが提案します。</p>
+
+        <label className="block text-sm font-bold text-navy-700 mb-1.5">強化したい買取商材</label>
+        <select
+          value={materialId}
+          onChange={(e) => setMaterialId(e.target.value)}
+          className="w-full border border-navy-200 rounded-xl px-3.5 py-2.5 mb-4 text-sm focus:outline-none focus:ring-2 focus:ring-navy-300"
+        >
+          {MATERIALS.map((m) => (
+            <option key={m.id} value={m.id}>{m.label}</option>
+          ))}
+        </select>
+
+        <label className="block text-sm font-bold text-navy-700 mb-1.5">地域名</label>
+        <input
+          value={region}
+          onChange={(e) => setRegion(e.target.value)}
+          placeholder="例）横浜市、渋谷区 など"
+          className="w-full border border-navy-200 rounded-xl px-3.5 py-2.5 mb-5 text-sm focus:outline-none focus:ring-2 focus:ring-navy-300"
+        />
+
+        <PrimaryButton onClick={generate} loading={loading} className="w-full justify-center">
+          AIで生成する
+        </PrimaryButton>
+      </SectionCard>
+
+      <div className="space-y-5">
+        {!result && !loading && (
+          <SectionCard>
+            <EmptyState icon="📝" text="商材と地域名を入力して「AIで生成する」を押すと、ここに記事構成案と投稿文が表示されます。" />
+          </SectionCard>
+        )}
+        {loading && (
+          <SectionCard className="p-10 text-center text-navy-400 text-sm">
+            AIが検索意図を分析し、コンテンツを作成しています…
+          </SectionCard>
+        )}
+        {result && (
+          <>
+            <SectionCard className="p-6 fade-up">
+              <div className="flex items-center gap-2 mb-3">
+                <Badge color="navy">ブログ記事構成案</Badge>
+                <span className="text-xs text-navy-400">想定文字数: {result.charCount}</span>
+              </div>
+              <h3 className="font-black text-navy-800 text-lg mb-4 leading-snug">{result.title}</h3>
+              <ol className="space-y-2 mb-4">
+                {result.headings.map((h, i) => (
+                  <li key={i} className="flex items-start gap-3 bg-navy-50 rounded-xl px-4 py-3">
+                    <span className="font-black text-navy-300 text-sm mt-0.5">H2</span>
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-navy-700">{h.h}</p>
+                    </div>
+                    <Badge color="gold">{h.intent}</Badge>
+                  </li>
+                ))}
+              </ol>
+              <div className="flex flex-wrap gap-2">
+                {result.targetKeywords.map((k, i) => (
+                  <span key={i} className="text-xs bg-white border border-navy-200 text-navy-500 px-3 py-1 rounded-full">#{k}</span>
+                ))}
+              </div>
+            </SectionCard>
+
+            <SectionCard className="p-6 fade-up">
+              <Badge color="green">Googleビジネスプロフィール 投稿文</Badge>
+              <div className="mt-4 space-y-3">
+                {result.gbpPosts.map((p, i) => (
+                  <div key={i} className="border border-navy-100 rounded-xl p-4 bg-navy-50/50">
+                    <div className="flex justify-between items-start gap-3 mb-2">
+                      <span className="text-xs font-bold text-navy-400">投稿案 {i + 1}</span>
+                      <CopyButton text={p} />
+                    </div>
+                    <p className="text-sm text-navy-700 whitespace-pre-line leading-relaxed">{p}</p>
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------
+   機能2: 折込チラシ用キャッチコピーメーカー
+--------------------------------------------------------- */
+function buildFlyerResult(audience) {
+  const b = audience.benefits;
+  const copies = [
+    { text: `${audience.label.replace(/を考える|を検討する|の方/g, "")}の"はじめの一歩"に、寄り添う査定を。`, note: `${audience.tone}を前面に出し、警戒心をやわらげる導入コピー` },
+    { text: `そのままにしていませんか？眠っている価値、プロが見つけます。`, note: "行動を後押しする問いかけ型コピー" },
+    { text: `${b[0]}で、ご自宅にいながら安心査定。`, note: "具体的なベネフィットを訴求する実利型コピー" },
+    { text: `地域密着◯年、${b[2] || b[1]}が選ばれる理由です。`, note: "信頼・実績を伝える権威付け型コピー" },
+  ];
+  return { copies, benefits: b };
+}
+
+function FlyerPreview({ headline, benefits }) {
+  return (
+    <div className="rounded-2xl overflow-hidden border border-navy-100 shadow-card bg-white">
+      <div className="bg-navy-700 text-gold-200 text-center text-xs font-bold py-1.5 tracking-wide">
+        地域のお客様に選ばれ続けて◯周年 ｜ 出張査定 無料
+      </div>
+      <div className="p-6 bg-gradient-to-b from-gold-50 to-white">
+        <p className="text-center text-navy-500 text-xs font-bold mb-1">今だけの特別査定キャンペーン</p>
+        <h3 className="text-center text-xl sm:text-2xl font-black text-navy-800 leading-snug mb-3">{headline}</h3>
+        <div className="flex justify-center mb-4">
+          <span className="bg-gold-500 text-white text-sm font-black px-4 py-1.5 rounded-full shadow-card">査定額 最大20%UPキャンペーン中</span>
+        </div>
+        <div className="h-28 rounded-xl bg-navy-100 flex items-center justify-center text-navy-300 text-xs font-bold mb-4">
+          商品写真イメージ
+        </div>
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          {benefits.map((b, i) => (
+            <div key={i} className="text-center">
+              <div className="w-9 h-9 mx-auto rounded-full bg-navy-700 text-white flex items-center justify-center text-sm font-black mb-1">✓</div>
+              <p className="text-[10px] leading-tight text-navy-600 font-bold">{b}</p>
+            </div>
+          ))}
+        </div>
+        <button className="w-full bg-navy-700 text-white font-black py-3 rounded-xl text-sm">📞 無料出張査定はこちら</button>
+        <p className="text-center text-[10px] text-navy-300 mt-2">株式会社◯◯買取センター（ダミー表示）</p>
+      </div>
+    </div>
+  );
+}
+
+function FlyerTab() {
+  const [audienceId, setAudienceId] = useState(AUDIENCES[0].id);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const generate = () => {
+    setLoading(true);
+    setResult(null);
+    const audience = AUDIENCES.find((a) => a.id === audienceId);
+    setTimeout(() => {
+      setResult(buildFlyerResult(audience));
+      setLoading(false);
+    }, 1000);
+  };
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-6">
+      <SectionCard className="p-6 h-fit">
+        <h2 className="font-black text-navy-800 mb-1">折込チラシ用キャッチコピーメーカー</h2>
+        <p className="text-xs text-navy-400 mb-5">狙いたいターゲット層を選ぶだけで、刺さる広告コピーとチラシのレイアウト案をAIが提案します。</p>
+
+        <label className="block text-sm font-bold text-navy-700 mb-1.5">ターゲット層</label>
+        <div className="space-y-2 mb-5">
+          {AUDIENCES.map((a) => (
+            <button
+              key={a.id}
+              onClick={() => setAudienceId(a.id)}
+              className={`w-full text-left px-3.5 py-2.5 rounded-xl text-sm font-bold border transition-colors ${
+                audienceId === a.id ? "bg-navy-700 text-white border-navy-700" : "bg-white text-navy-600 border-navy-200 hover:border-navy-400"
+              }`}
+            >
+              {a.label}
+            </button>
+          ))}
+        </div>
+
+        <PrimaryButton onClick={generate} loading={loading} className="w-full justify-center">
+          キャッチコピーを提案する
+        </PrimaryButton>
+      </SectionCard>
+
+      <div className="space-y-5">
+        {!result && !loading && (
+          <SectionCard>
+            <EmptyState icon="🎯" text="ターゲット層を選んで「キャッチコピーを提案する」を押すと、広告コピー案とチラシレイアウトが表示されます。" />
+          </SectionCard>
+        )}
+        {loading && (
+          <SectionCard className="p-10 text-center text-navy-400 text-sm">
+            AIがターゲット層に刺さる訴求を検討しています…
+          </SectionCard>
+        )}
+        {result && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <SectionCard className="p-6 fade-up">
+              <Badge color="navy">キャッチコピー案</Badge>
+              <div className="mt-4 space-y-3">
+                {result.copies.map((c, i) => (
+                  <div key={i} className="border border-navy-100 rounded-xl p-4">
+                    <div className="flex items-start justify-between gap-3 mb-1.5">
+                      <p className="font-black text-navy-800 leading-snug">{c.text}</p>
+                      <CopyButton text={c.text} />
+                    </div>
+                    <p className="text-xs text-navy-400">{c.note}</p>
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+            <div className="fade-up">
+              <p className="text-xs font-bold text-navy-400 mb-2 px-1">チラシレイアウト案プレビュー</p>
+              <FlyerPreview headline={result.copies[0].text} benefits={result.benefits} />
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------
+   機能3: 競合・口コミデータ分析シミュレーター
+--------------------------------------------------------- */
+const AXIS_KEYWORDS = {
+  "接客の丁寧さ": { pos: ["丁寧", "親切", "感じが良い", "好印象"], neg: ["事務的", "冷たい", "態度が悪い", "不愛想"] },
+  "査定スピード": { pos: ["早い", "スピーディ", "すぐ", "即日"], neg: ["遅い", "待たされ", "時間がかかる"] },
+  "査定額の納得感": { pos: ["高い", "納得", "満足", "高価買取"], neg: ["安い", "買い叩", "納得できない", "低い"] },
+  "店舗の清潔感": { pos: ["清潔", "綺麗", "きれい"], neg: ["汚い", "古い", "狭い"] },
+  "手続きの分かりやすさ": { pos: ["分かりやすい", "簡単", "スムーズ"], neg: ["分かりにくい", "面倒", "複雑"] },
+};
+
+const PRESET_REVIEWS = `査定が早いという声が多く、即日対応も好評。ただし「対応が事務的だった」「もう少し金額を上げてほしかった」という指摘も見られる。店舗は古めで少し狭いという口コミもあり。`;
+
+function scoreFromText(text, base) {
+  const scores = {};
+  AXES.forEach((axis) => {
+    let s = base;
+    const kw = AXIS_KEYWORDS[axis];
+    kw.pos.forEach((w) => { if (text.includes(w)) s += 14; });
+    kw.neg.forEach((w) => { if (text.includes(w)) s -= 16; });
+    scores[axis] = Math.max(20, Math.min(98, Math.round(s)));
+  });
+  return scores;
+}
+
+function RadarChart({ own, competitor }) {
+  const size = 320;
+  const center = size / 2;
+  const radius = 88;
+  const n = AXES.length;
+
+  const pointFor = (value, i) => {
+    const angle = (Math.PI * 2 * i) / n - Math.PI / 2;
+    const r = (value / 100) * radius;
+    return [center + r * Math.cos(angle), center + r * Math.sin(angle)];
+  };
+  const toPoints = (obj) => AXES.map((a, i) => pointFor(obj[a], i)).map((p) => p.join(",")).join(" ");
+
+  const labelLines = (label) => {
+    const mid = Math.ceil(label.length / 2);
+    return [label.slice(0, mid), label.slice(mid)];
+  };
+
+  const gridLevels = [20, 40, 60, 80, 100];
+
+  return (
+    <svg viewBox={`0 0 ${size} ${size}`} className="w-full max-w-sm mx-auto">
+      {gridLevels.map((lvl, gi) => (
+        <polygon
+          key={gi}
+          points={AXES.map((a, i) => pointFor(lvl, i).join(",")).join(" ")}
+          fill="none"
+          stroke="#e2e8f0"
+          strokeWidth="1"
+        />
+      ))}
+      {AXES.map((a, i) => {
+        const [x, y] = pointFor(100, i);
+        return <line key={i} x1={center} y1={center} x2={x} y2={y} stroke="#e2e8f0" strokeWidth="1" />;
+      })}
+      <polygon points={toPoints(competitor)} fill="#c98c1c" fillOpacity="0.18" stroke="#c98c1c" strokeWidth="2" />
+      <polygon points={toPoints(own)} fill="#2c4763" fillOpacity="0.25" stroke="#2c4763" strokeWidth="2" />
+      {AXES.map((a, i) => {
+        const [x, y] = pointFor(126, i);
+        const [line1, line2] = labelLines(a);
+        return (
+          <text key={i} x={x} y={y} fontSize="10" fontWeight="700" fill="#233a50" textAnchor="middle" dominantBaseline="middle">
+            <tspan x={x} dy="-0.55em">{line1}</tspan>
+            <tspan x={x} dy="1.15em">{line2}</tspan>
+          </text>
+        );
+      })}
+    </svg>
+  );
+}
+
+function buildAnalysis(reviewText, ownText) {
+  const competitor = scoreFromText(reviewText, 58);
+  const own = scoreFromText(ownText || "丁寧な接客と分かりやすい説明を意識しています", 74);
+
+  const gaps = AXES.map((a) => ({ axis: a, gap: own[a] - competitor[a], own: own[a], competitor: competitor[a] }))
+    .sort((a, b) => b.gap - a.gap);
+
+  const actionMap = {
+    "接客の丁寧さ": "スタッフの丁寧な接客エピソードをGBP投稿・チラシで具体的に紹介する",
+    "査定スピード": "「最短◯分査定」など、スピード感を数字で明示した訴求を追加する",
+    "査定額の納得感": "査定基準の透明性（相場根拠の提示など）を打ち出し、納得感を訴求する",
+    "店舗の清潔感": "店内の写真・内観をGoogleビジネスプロフィールに積極的に掲載する",
+    "手続きの分かりやすさ": "査定〜入金までの流れを3ステップ図解でチラシ・サイトに掲載する",
+  };
+
+  const topGaps = gaps.slice(0, 2);
+  const weakest = gaps[gaps.length - 1];
+
+  const comment =
+    `口コミ分析の結果、競合店は「${gaps.find((g) => g.competitor === Math.max(...AXES.map((a) => competitor[a]))).axis}」で一定の評価を得ている一方、` +
+    `${gaps[gaps.length - 1].axis.includes("接客") || competitor["接客の丁寧さ"] < 55 ? "接客対応の面では不満の声も見られます。" : "改善の余地があるポイントも見受けられます。"}` +
+    `自社は「${topGaps[0].axis}」で競合を${topGaps[0].gap}pt上回っており、この強みを前面に打ち出すことで明確な差別化が期待できます。`;
+
+  return { own, competitor, gaps, topGaps, weakest, comment, actionMap };
+}
+
+function AnalysisTab() {
+  const [reviewText, setReviewText] = useState("");
+  const [ownText, setOwnText] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const analyze = () => {
+    setLoading(true);
+    setResult(null);
+    setTimeout(() => {
+      setResult(buildAnalysis(reviewText.trim() || PRESET_REVIEWS, ownText.trim()));
+      setLoading(false);
+    }, 1200);
+  };
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-6">
+      <SectionCard className="p-6 h-fit">
+        <h2 className="font-black text-navy-800 mb-1">競合・口コミデータ分析シミュレーター</h2>
+        <p className="text-xs text-navy-400 mb-5">近隣店舗の口コミ傾向を入力すると、自社が訴求すべき差別化ポイントをAIが分析・可視化します。</p>
+
+        <label className="block text-sm font-bold text-navy-700 mb-1.5">近隣競合店の口コミ・評判の傾向</label>
+        <textarea
+          value={reviewText}
+          onChange={(e) => setReviewText(e.target.value)}
+          placeholder={PRESET_REVIEWS}
+          rows={5}
+          className="w-full border border-navy-200 rounded-xl px-3.5 py-2.5 mb-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-300 resize-none"
+        />
+        <button onClick={() => setReviewText(PRESET_REVIEWS)} className="text-xs text-navy-400 underline mb-4">サンプル口コミを入力する</button>
+
+        <label className="block text-sm font-bold text-navy-700 mb-1.5">自社の強み（任意）</label>
+        <textarea
+          value={ownText}
+          onChange={(e) => setOwnText(e.target.value)}
+          placeholder="例）査定士が国家資格保有、対応が丁寧と評判"
+          rows={3}
+          className="w-full border border-navy-200 rounded-xl px-3.5 py-2.5 mb-5 text-sm focus:outline-none focus:ring-2 focus:ring-navy-300 resize-none"
+        />
+
+        <PrimaryButton onClick={analyze} loading={loading} className="w-full justify-center">
+          分析する
+        </PrimaryButton>
+      </SectionCard>
+
+      <div className="space-y-5">
+        {!result && !loading && (
+          <SectionCard>
+            <EmptyState icon="📊" text="口コミ傾向を入力して「分析する」を押すと、自社と競合の比較ダッシュボードが表示されます。" />
+          </SectionCard>
+        )}
+        {loading && (
+          <SectionCard className="p-10 text-center text-navy-400 text-sm">
+            AIが口コミ傾向を解析し、差別化ポイントを抽出しています…
+          </SectionCard>
+        )}
+        {result && (
+          <>
+            <SectionCard className="p-6 fade-up">
+              <div className="flex items-center justify-between mb-2">
+                <Badge color="navy">自社 vs 競合 比較チャート</Badge>
+                <div className="flex items-center gap-4 text-xs font-bold">
+                  <span className="flex items-center gap-1.5 text-navy-700"><span className="w-3 h-3 rounded-sm bg-navy-700 inline-block"></span>自社</span>
+                  <span className="flex items-center gap-1.5 text-gold-600"><span className="w-3 h-3 rounded-sm bg-gold-500 inline-block"></span>競合平均</span>
+                </div>
+              </div>
+              <RadarChart own={result.own} competitor={result.competitor} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                {AXES.map((a) => (
+                  <div key={a} className="flex items-center justify-between text-xs bg-navy-50 rounded-lg px-3 py-2">
+                    <span className="font-bold text-navy-600">{a}</span>
+                    <span className="text-navy-500">
+                      <b className="text-navy-800">{result.own[a]}</b> / {result.competitor[a]}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+
+            <SectionCard className="p-6 fade-up">
+              <Badge color="gold">アピールすべき差別化ポイント</Badge>
+              <div className="mt-4 space-y-3">
+                {result.topGaps.map((g, i) => (
+                  <div key={g.axis} className="flex items-start gap-3 border border-navy-100 rounded-xl p-4">
+                    <Badge color={i === 0 ? "green" : "navy"}>{i === 0 ? "最優先" : "推奨"}</Badge>
+                    <div className="flex-1">
+                      <p className="font-black text-navy-800">{g.axis}（自社 {g.own} / 競合 {g.competitor}）</p>
+                      <p className="text-xs text-navy-500 mt-1">{result.actionMap[g.axis]}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+
+            <SectionCard className="p-6 fade-up">
+              <Badge color="navy">AIによる分析コメント</Badge>
+              <p className="text-sm text-navy-600 leading-relaxed mt-3">{result.comment}</p>
+            </SectionCard>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------
+   App
+--------------------------------------------------------- */
+function App() {
+  const [tab, setTab] = useState("seo");
+  const [showCta, setShowCta] = useState(false);
+
+  return (
+    <div className="min-h-screen">
+      <Header onCtaClick={() => setShowCta(true)} />
+      <TabNav active={tab} onChange={setTab} />
+      <main className="max-w-6xl mx-auto px-5 py-6 pb-16">
+        {tab === "seo" && <SeoTab />}
+        {tab === "flyer" && <FlyerTab />}
+        {tab === "analysis" && <AnalysisTab />}
+      </main>
+      {showCta && <CtaModal onClose={() => setShowCta(false)} />}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
