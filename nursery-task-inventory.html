@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>業務棚卸し × 日次タスク化デモ｜保育園向け</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: {
+        maru: ['"Zen Maru Gothic"', '"Noto Sans JP"', 'sans-serif'],
+      },
+      colors: {
+        cream: '#FBF5EC',
+        terracotta: '#E38B5B',
+        terracottaDark: '#C96C3E',
+        sage: '#8FA98A',
+        sageDark: '#6E8A6C',
+        sunflower: '#F3C15F',
+        sky: '#7FB8C4',
+        ink: '#4A3F35',
+      },
+      boxShadow: {
+        warm: '0 10px 30px -10px rgba(201, 108, 62, 0.25)',
+        soft: '0 4px 20px -4px rgba(74, 63, 53, 0.12)',
+      }
+    }
+  }
+}
+</script>
+<style>
+  * { font-family: 'Zen Maru Gothic', 'Noto Sans JP', sans-serif; }
+  body { background: #FBF5EC; }
+
+  .blob {
+    position: absolute;
+    border-radius: 999px;
+    filter: blur(40px);
+    opacity: 0.55;
+  }
+
+  .hero-bg {
+    background: linear-gradient(135deg, #F6D9B8 0%, #EFB98A 35%, #E38B5B 75%, #D9784A 100%);
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-14px); }
+  }
+  .float { animation: float 6s ease-in-out infinite; }
+  .float-slow { animation: float 9s ease-in-out infinite; }
+  .float-delay { animation: float 7s ease-in-out infinite; animation-delay: 1.5s; }
+
+  @keyframes spin-slow { to { transform: rotate(360deg); } }
+  .spin-slow { animation: spin-slow 1.4s linear infinite; }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .fade-in-up { animation: fadeInUp 0.55s ease-out both; }
+
+  @keyframes popIn {
+    0% { opacity: 0; transform: scale(0.85); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  .pop-in { animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+  @keyframes pulseSoft {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(227,139,91,0.35); }
+    50% { box-shadow: 0 0 0 10px rgba(227,139,91,0); }
+  }
+  .pulse-soft { animation: pulseSoft 2s infinite; }
+
+  .step-line {
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #E4C9AA; border-radius: 999px; }
+
+  .chip {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .chip:hover { transform: translateY(-2px); box-shadow: 0 6px 14px -4px rgba(74,63,53,0.2); }
+
+  textarea { line-height: 1.7; }
+
+  .accordion-body {
+    transition: grid-template-rows 0.35s ease;
+    display: grid;
+  }
+
+  [v-cloak] { display: none; }
+</style>
+</head>
+<body class="text-ink">
+
+<div id="app" v-cloak>
+
+  <!-- ============ HERO ============ -->
+  <header class="relative overflow-hidden hero-bg">
+    <div class="blob w-72 h-72 bg-white/40 -top-16 -left-10 float-slow"></div>
+    <div class="blob w-56 h-56 bg-sunflower/60 top-24 right-10 float"></div>
+    <div class="blob w-40 h-40 bg-sage/40 bottom-0 left-1/3 float-delay"></div>
+
+    <div class="relative max-w-6xl mx-auto px-6 pt-10 pb-16 sm:pt-14 sm:pb-20">
+      <div class="flex items-center justify-between flex-wrap gap-3 mb-8">
+        <div class="flex items-center gap-2 text-white/95 font-bold text-sm sm:text-base">
+          <span class="text-2xl">🌸</span>
+          <span>ほいく業務ラボ｜棚卸しデモツール</span>
+        </div>
+        <div class="flex items-center gap-2 bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-soft">
+          <span class="text-lg">🔒</span>
+          <span class="text-xs sm:text-sm font-bold text-terracottaDark">個人情報はAIに送信しません</span>
+        </div>
+      </div>
+
+      <div class="max-w-3xl">
+        <p class="inline-block bg-white/25 text-white text-xs sm:text-sm font-bold px-3 py-1 rounded-full mb-4 tracking-wide">
+          XMindのタスク → 現場の「日次To-Do」へ
+        </p>
+        <h1 class="text-3xl sm:text-5xl font-black text-white leading-snug drop-shadow-sm">
+          その業務、まだ<span class="underline decoration-sunflower decoration-4 underline-offset-4">頭の中</span>だけに<br class="hidden sm:block">ありませんか？
+        </h1>
+        <p class="mt-5 text-white/95 text-sm sm:text-base leading-relaxed">
+          毎月50個以上のタスクをマインドマップに書き出すだけで終わっていませんか。<br class="hidden sm:block">
+          このツールは、雑多なタスクを<b class="text-white">「誰が・何を・AIでどこまで楽にできるか」</b>に構造化し、
+          現場の保育士さんが迷わず動ける<b class="text-white">日次To-Do</b>に変換します。
+        </p>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ MAIN ============ -->
+  <main class="max-w-6xl mx-auto px-6 -mt-10 pb-24 relative z-10">
+
+    <!-- INPUT CARD -->
+    <section class="bg-white rounded-3xl shadow-warm p-6 sm:p-8 border border-terracotta/10">
+      <div class="flex items-center gap-3 mb-1">
+        <div class="w-10 h-10 rounded-2xl bg-terracotta/10 flex items-center justify-center text-xl">📥</div>
+        <h2 class="text-lg sm:text-xl font-black text-ink">STEP 1｜XMindのタスクを貼り付ける</h2>
+      </div>
+      <p class="text-sm text-ink/60 ml-[52px] mb-5">アウトライン形式（親タスク／インデントで子タスク）のテキストをそのまま貼り付けられます。</p>
+
+      <textarea
+        v-model="inputText"
+        placeholder="例）&#10;10月おたより作成&#10;　文章の下書き作成&#10;　行事写真の選定&#10;運動会準備&#10;　プログラム構成の検討&#10;　…"
+        class="w-full h-48 sm:h-56 rounded-2xl border-2 border-terracotta/15 focus:border-terracotta focus:outline-none p-4 text-sm text-ink bg-cream/60 resize-none transition-colors"
+      ></textarea>
+
+      <div class="flex flex-wrap items-center gap-3 mt-5">
+        <button @click="fillSample"
+          class="flex items-center gap-2 bg-white border-2 border-sage text-sageDark font-bold px-5 py-3 rounded-full hover:bg-sage/10 transition-colors text-sm">
+          <span>🍁</span> サンプルデータ入力（10月おたより・運動会 ほか）
+        </button>
+
+        <button @click="clearAll" v-if="inputText"
+          class="flex items-center gap-2 text-ink/40 hover:text-ink/70 font-bold px-4 py-3 rounded-full text-sm transition-colors">
+          <span>✕</span> クリア
+        </button>
+
+        <div class="grow"></div>
+
+        <button @click="startAnalysis" :disabled="isLoading"
+          class="flex items-center gap-2 bg-gradient-to-r from-terracotta to-terracottaDark text-white font-black px-7 py-3.5 rounded-full shadow-warm hover:brightness-105 active:scale-95 transition disabled:opacity-50 disabled:cursor-not-allowed pulse-soft">
+          <span class="text-lg">🪄</span> AIで棚卸しを開始する
+        </button>
+      </div>
+
+      <transition enter-active-class="fade-in-up">
+        <p v-if="showEmptyWarning" class="mt-3 text-sm font-bold text-terracottaDark bg-terracotta/10 rounded-xl px-4 py-2 inline-block">
+          ⚠️ テキストを入力するか、「サンプルデータ入力」をお試しください
+        </p>
+      </transition>
+    </section>
+
+    <!-- SECURITY DETAIL BADGE -->
+    <section class="mt-6 bg-sage/10 border-2 border-sage/30 rounded-3xl p-5 sm:p-6 flex items-start gap-4">
+      <div class="text-3xl">🔒</div>
+      <div>
+        <p class="font-black text-sageDark text-sm sm:text-base">セキュリティ安心設計</p>
+        <p class="text-sm text-ink/70 mt-1 leading-relaxed">
+          園児・保護者の個人情報はAIへ送信されません。本ツールが扱うのは「業務の手順・タスク構造」のみで、
+          お名前や連絡先などの情報を入力・保存することもありません。
+        </p>
+      </div>
+    </section>
+
+    <!-- ============ LOADING OVERLAY ============ -->
+    <transition enter-active-class="fade-in-up" leave-active-class="transition-opacity duration-200" leave-to-class="opacity-0">
+      <section v-if="isLoading" class="mt-10 bg-white rounded-3xl shadow-warm p-8 sm:p-12 text-center border border-terracotta/10">
+        <div class="mx-auto w-20 h-20 rounded-full border-4 border-terracotta/20 border-t-terracotta spin-slow mb-6"></div>
+        <h3 class="text-xl sm:text-2xl font-black text-terracottaDark mb-1">AIが構造化中<span class="animate-pulse">...</span></h3>
+        <p class="text-sm text-ink/50 mb-8">雑多なタスクを、現場で使える形に整理しています</p>
+
+        <div class="max-w-md mx-auto text-left space-y-3">
+          <div v-for="(step, i) in loadingSteps" :key="i"
+            class="step-line flex items-center gap-3 rounded-2xl px-4 py-3"
+            :class="i <= loadingStep ? 'bg-terracotta/5' : 'opacity-35'">
+            <span class="text-xl w-6 text-center">
+              <span v-if="i < loadingStep">✅</span>
+              <span v-else-if="i === loadingStep" class="inline-block spin-slow">⏳</span>
+              <span v-else>◯</span>
+            </span>
+            <span class="text-sm font-bold text-ink/80">{{ step }}</span>
+          </div>
+        </div>
+      </section>
+    </transition>
+
+    <!-- ============ RESULTS ============ -->
+    <div v-if="showResults" ref="results">
+
+      <!-- STATS -->
+      <section class="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-4 fade-in-up">
+        <div class="bg-white rounded-2xl shadow-soft p-5 text-center border border-terracotta/10">
+          <p class="text-3xl sm:text-4xl font-black text-terracottaDark">{{ animated.total }}</p>
+          <p class="text-xs sm:text-sm text-ink/50 font-bold mt-1">総タスク数</p>
+        </div>
+        <div class="bg-white rounded-2xl shadow-soft p-5 text-center border border-terracotta/10">
+          <p class="text-3xl sm:text-4xl font-black text-sky">{{ animated.parents }}</p>
+          <p class="text-xs sm:text-sm text-ink/50 font-bold mt-1">業務カテゴリ数</p>
+        </div>
+        <div class="bg-white rounded-2xl shadow-soft p-5 text-center border border-terracotta/10">
+          <p class="text-3xl sm:text-4xl font-black text-sageDark">{{ animated.autoPct }}<span class="text-lg">%</span></p>
+          <p class="text-xs sm:text-sm text-ink/50 font-bold mt-1">AI効率化 対象比率</p>
+        </div>
+        <div class="bg-white rounded-2xl shadow-soft p-5 text-center border border-terracotta/10">
+          <p class="text-3xl sm:text-4xl font-black text-sunflower drop-shadow-[0_1px_0_rgba(0,0,0,0.15)]">{{ animated.hours }}<span class="text-lg">h</span></p>
+          <p class="text-xs sm:text-sm text-ink/50 font-bold mt-1">週あたり削減見込み</p>
+        </div>
+      </section>
+
+      <!-- OUTPUT 1: 構造化テーブル -->
+      <section class="mt-10 bg-white rounded-3xl shadow-warm p-6 sm:p-8 border border-terracotta/10 fade-in-up">
+        <div class="flex items-center gap-3 mb-1">
+          <div class="w-10 h-10 rounded-2xl bg-sky/10 flex items-center justify-center text-xl">🗂️</div>
+          <h2 class="text-lg sm:text-xl font-black text-ink">業務構造化テーブル</h2>
+        </div>
+        <p class="text-sm text-ink/60 ml-[52px] mb-6">親タスク・子タスクごとに、推奨担当とAI効率化の可否を自動診断しました</p>
+
+        <div class="space-y-4">
+          <div v-for="(group, gi) in structured" :key="gi" class="border border-terracotta/10 rounded-2xl overflow-hidden">
+            <button @click="toggleGroup(gi)" class="w-full flex items-center justify-between gap-3 px-5 py-4 bg-cream/70 hover:bg-cream transition-colors text-left">
+              <div class="flex items-center gap-3 min-w-0">
+                <span class="text-2xl shrink-0">{{ group.icon }}</span>
+                <div class="min-w-0">
+                  <p class="font-black text-ink text-sm sm:text-base truncate">{{ group.title }}</p>
+                  <p class="text-xs text-ink/45 font-bold">子タスク {{ group.children.length }}件</p>
+                </div>
+              </div>
+              <span class="text-ink/40 text-sm shrink-0 transition-transform" :class="openGroups[gi] ? 'rotate-180' : ''">▼</span>
+            </button>
+
+            <div v-show="openGroups[gi]" class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="text-ink/40 text-xs border-b border-terracotta/10">
+                    <th class="text-left font-bold px-5 py-2 w-1/2">子タスク</th>
+                    <th class="text-left font-bold px-3 py-2">推奨担当</th>
+                    <th class="text-left font-bold px-3 py-2">AI効率化可否</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(c, ci) in group.children" :key="ci" class="border-b border-terracotta/5 last:border-0 hover:bg-cream/40">
+                    <td class="px-5 py-2.5 text-ink/80 font-medium">{{ c.text }}</td>
+                    <td class="px-3 py-2.5">
+                      <span class="inline-flex items-center gap-1 font-bold text-ink/70">
+                        <span>{{ staffEmoji[c.staff] }}</span>{{ c.staff }}
+                      </span>
+                    </td>
+                    <td class="px-3 py-2.5">
+                      <span class="text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap" :class="autoBadge[c.automation].cls">
+                        {{ autoBadge[c.automation].icon }} {{ c.automation }}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- OUTPUT 2: 日次To-Do -->
+      <section class="mt-8 bg-white rounded-3xl shadow-warm p-6 sm:p-8 border border-terracotta/10 fade-in-up">
+        <div class="flex items-center gap-3 mb-1">
+          <div class="w-10 h-10 rounded-2xl bg-sunflower/20 flex items-center justify-center text-xl">📅</div>
+          <h2 class="text-lg sm:text-xl font-black text-ink">現場用｜日次To-Doカレンダー</h2>
+        </div>
+        <p class="text-sm text-ink/60 ml-[52px] mb-6">保育士さんごとに、曜日単位でやることが一目でわかります</p>
+
+        <div class="grid lg:grid-cols-2 gap-6">
+          <div v-for="staff in ['保育士A','保育士B']" :key="staff" class="rounded-2xl border-2 p-5"
+               :class="staff === '保育士A' ? 'border-terracotta/20 bg-terracotta/5' : 'border-sky/25 bg-sky/5'">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-11 h-11 rounded-full flex items-center justify-center text-xl text-white font-black shrink-0"
+                   :class="staff === '保育士A' ? 'bg-terracotta' : 'bg-sky'">
+                {{ staff === '保育士A' ? 'A' : 'B' }}
+              </div>
+              <div>
+                <p class="font-black text-ink text-sm sm:text-base">{{ staffEmoji[staff] }} {{ staff }} さんの週間To-Do</p>
+                <p class="text-xs text-ink/45 font-bold">担当タスク {{ dailyBoard[staff].total }}件</p>
+              </div>
+            </div>
+
+            <div class="space-y-3">
+              <div v-for="day in days" :key="day" class="bg-white/80 rounded-xl p-3.5">
+                <p class="text-xs font-black text-ink/50 mb-2">{{ day }}曜日</p>
+                <div v-if="dailyBoard[staff].byDay[day].length" class="flex flex-wrap gap-2">
+                  <span v-for="(t, ti) in dailyBoard[staff].byDay[day]" :key="ti"
+                    class="chip text-xs font-bold px-3 py-1.5 rounded-full bg-cream border border-terracotta/10 text-ink/75">
+                    {{ t.parentIcon }} {{ t.text }}
+                  </span>
+                </div>
+                <p v-else class="text-xs text-ink/30 font-bold">— 予定なし —</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="otherStaffCounts.length" class="mt-6 bg-cream/70 rounded-2xl p-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+          <span class="font-black text-ink/50">👥 その他の担当への振り分け：</span>
+          <span v-for="o in otherStaffCounts" :key="o.staff" class="font-bold text-ink/70">
+            {{ staffEmoji[o.staff] }} {{ o.staff }}：{{ o.count }}件
+          </span>
+        </div>
+      </section>
+
+      <p class="text-center text-xs text-ink/35 font-bold mt-8">
+        ※ 本結果はデモ用のシミュレーションです。実際の運用では貴園の業務フローに合わせてAIがチューニングされます
+      </p>
+    </div>
+
+  </main>
+
+  <footer class="text-center text-xs text-ink/40 font-bold pb-10">
+    🌷 ほいく業務ラボ｜業務棚卸し＆日次タスク化デモツール
+  </footer>
+
+</div>
+
+<script>
+const { createApp, ref, reactive, nextTick } = Vue;
+
+createApp({
+  setup() {
+    const SAMPLE_TEXT =
+`10月おたより作成
+　文章の下書き作成
+　行事写真の選定
+　デザイン・レイアウト作成
+　園内チェック・誤字確認
+　印刷・配布物準備
+　各家庭への配布
+
+運動会準備
+　プログラム構成の検討
+　保護者への案内文作成
+　使用音楽の選定・編集
+　万国旗・装飾の準備
+　参加賞・メダルの発注
+　玉入れ・かけっこ道具の準備
+　駐車場・受付の動線確認
+　雨天時の代替案検討
+　当日の役割分担表作成
+　近隣への挨拶・案内
+
+写真提出・アルバム作成
+　行事写真の選定・整理
+　写真データのクラウド共有
+　卒園アルバム業者との調整
+　個人写真の仕分け
+　写真販売の案内作成
+
+献立表・給食関連
+　来月分の献立表作成
+　アレルギー確認・対応表更新
+　給食業者との発注調整
+　食材の在庫確認
+　給食だよりの作成
+　衛生点検記録の記入
+
+保護者面談準備
+　面談日程の調整
+　園児の発達記録まとめ
+　面談シートの作成
+　個別の相談内容整理
+　面談当日の対応
+
+ハロウィン会準備
+　仮装衣装の準備確認
+　飾り付け制作
+　お菓子・景品の発注
+　ゲーム内容の企画
+　保護者への案内配布
+　当日の進行台本作成
+
+連絡帳・日誌業務
+　毎日の連絡帳記入
+　保育日誌の記録
+　体温・健康チェック記録
+　ヒヤリハット報告の記入
+　月案・週案の作成
+
+環境整備・安全点検
+　遊具の安全点検
+　教室内の清掃・消毒
+　避難訓練の計画・実施
+　防犯カメラの点検
+　備品の在庫チェック
+　感染症対策の掲示物更新
+
+職員会議・研修
+　月次職員会議の準備
+　議事録の作成・共有
+　外部研修の申込手続き
+　新人保育士のOJT計画
+　勤務シフト表の作成`;
+
+    const inputText = ref('');
+    const isLoading = ref(false);
+    const showResults = ref(false);
+    const showEmptyWarning = ref(false);
+    const loadingStep = ref(-1);
+    const loadingSteps = [
+      '📝 テキストを解析しています...',
+      '🗂️ 親タスク・子タスクに分類しています...',
+      '👥 現場の担当者を割り当てています...',
+      '⚡ AI効率化ポイントを診断しています...',
+    ];
+
+    const structured = ref([]);
+    const openGroups = reactive({});
+    const days = ['月', '火', '水', '木', '金'];
+    const dailyBoard = reactive({ '保育士A': { total: 0, byDay: {} }, '保育士B': { total: 0, byDay: {} } });
+    const otherStaffCounts = ref([]);
+    const animated = reactive({ total: 0, parents: 0, autoPct: 0, hours: 0 });
+    const results = ref(null);
+
+    const staffEmoji = {
+      '保育士A': '🧑‍🏫', '保育士B': '👩‍🏫', '主任': '🎖️', '経営者': '🏫', '事務': '🗃️'
+    };
+    const autoBadge = {
+      '自動化可能': { cls: 'bg-sage/15 text-sageDark', icon: '⚡' },
+      '一部自動化': { cls: 'bg-sunflower/25 text-terracottaDark', icon: '🌗' },
+      '人手必須':   { cls: 'bg-terracotta/15 text-terracottaDark', icon: '🤝' },
+    };
+    const iconMap = [
+      ['おたより', '✉️'], ['運動会', '🏃'], ['写真', '📷'], ['アルバム', '📷'],
+      ['献立', '🍽️'], ['給食', '🍽️'], ['面談', '🗣️'], ['ハロウィン', '🎃'],
+      ['行事', '🎉'], ['連絡帳', '📔'], ['日誌', '📔'], ['安全点検', '🛡️'],
+      ['環境整備', '🧹'], ['会議', '💼'], ['研修', '📚'],
+    ];
+
+    function hashStr(s) {
+      let h = 0;
+      for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+      return h;
+    }
+    function getIcon(title) {
+      const hit = iconMap.find(([k]) => title.includes(k));
+      return hit ? hit[1] : '📌';
+    }
+    function assignStaff(task) {
+      if (/面談|保護者対応|苦情|相談|個別/.test(task)) return '主任';
+      if (/予算|契約|採用|経営|人事/.test(task)) return '経営者';
+      if (/発注|印刷|請求|集計|配布物準備|業者/.test(task)) return '事務';
+      return hashStr(task) % 2 === 0 ? '保育士A' : '保育士B';
+    }
+    function assignAutomation(task) {
+      if (/写真|集計|印刷|配布物|在庫|データ入力|請求|名簿|台帳|共有|案内文|案内配布/.test(task)) return '自動化可能';
+      if (/面談|声かけ|見守り|指導|相談|対応|訓練|園児|子ども/.test(task)) return '人手必須';
+      return '一部自動化';
+    }
+
+    function fillSample() {
+      inputText.value = SAMPLE_TEXT;
+      showEmptyWarning.value = false;
+    }
+    function clearAll() {
+      inputText.value = '';
+      showResults.value = false;
+    }
+
+    function parseOutline(text) {
+      const rawLines = text.split('\n');
+      const groups = [];
+      let current = null;
+      for (const raw of rawLines) {
+        if (!raw.trim()) continue;
+        const isChild = /^[\s\t　]/.test(raw) || /^[・\-]/.test(raw.trim());
+        const clean = raw.trim().replace(/^[・\-]\s*/, '');
+        if (!clean) continue;
+        if (!isChild) {
+          current = { title: clean, icon: getIcon(clean), children: [] };
+          groups.push(current);
+        } else {
+          if (!current) {
+            current = { title: '未分類タスク', icon: '📌', children: [] };
+            groups.push(current);
+          }
+          const staff = assignStaff(clean);
+          const automation = assignAutomation(clean);
+          const day = days[hashStr(clean + staff) % days.length];
+          current.children.push({ text: clean, staff, automation, day, parentIcon: current.icon });
+        }
+      }
+      return groups.filter(g => g.children.length);
+    }
+
+    function animateNumber(key, target, duration = 900) {
+      const start = performance.now();
+      function tick(now) {
+        const p = Math.min(1, (now - start) / duration);
+        const eased = 1 - Math.pow(1 - p, 3);
+        animated[key] = key === 'autoPct'
+          ? Math.round(target * eased)
+          : (key === 'hours' ? Math.round(target * eased * 10) / 10 : Math.round(target * eased));
+        if (p < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }
+
+    function computeResults() {
+      const groups = parseOutline(inputText.value);
+      structured.value = groups;
+      groups.forEach((g, i) => { openGroups[i] = true; });
+
+      const allChildren = groups.flatMap(g => g.children);
+      const total = allChildren.length;
+      const autoCount = allChildren.filter(c => c.automation === '自動化可能').length;
+      const partialCount = allChildren.filter(c => c.automation === '一部自動化').length;
+      const autoPct = total ? Math.round(((autoCount + partialCount * 0.5) / total) * 100) : 0;
+      const hoursSaved = Math.round(((autoCount * 15 + partialCount * 5) / 60) * 10) / 10;
+
+      ['保育士A', '保育士B'].forEach(s => {
+        const list = allChildren.filter(c => c.staff === s);
+        const byDay = {};
+        days.forEach(d => { byDay[d] = list.filter(c => c.day === d); });
+        dailyBoard[s] = { total: list.length, byDay };
+      });
+
+      const otherCounts = {};
+      allChildren.forEach(c => {
+        if (c.staff !== '保育士A' && c.staff !== '保育士B') {
+          otherCounts[c.staff] = (otherCounts[c.staff] || 0) + 1;
+        }
+      });
+      otherStaffCounts.value = Object.entries(otherCounts).map(([staff, count]) => ({ staff, count }));
+
+      showResults.value = true;
+      nextTick(() => {
+        animateNumber('total', total);
+        animateNumber('parents', groups.length);
+        animateNumber('autoPct', autoPct);
+        animateNumber('hours', hoursSaved);
+        results.value && results.value.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+
+    function startAnalysis() {
+      if (!inputText.value.trim()) {
+        showEmptyWarning.value = true;
+        return;
+      }
+      showEmptyWarning.value = false;
+      showResults.value = false;
+      isLoading.value = true;
+      loadingStep.value = 0;
+
+      const stepDelay = 620;
+      loadingSteps.forEach((_, i) => {
+        setTimeout(() => { loadingStep.value = i + 1; }, stepDelay * (i + 1));
+      });
+      setTimeout(() => {
+        isLoading.value = false;
+        computeResults();
+      }, stepDelay * loadingSteps.length + 350);
+    }
+
+    function toggleGroup(i) { openGroups[i] = !openGroups[i]; }
+
+    return {
+      inputText, isLoading, showResults, showEmptyWarning, loadingStep, loadingSteps,
+      structured, openGroups, days, dailyBoard, otherStaffCounts, animated, results,
+      staffEmoji, autoBadge,
+      fillSample, clearAll, startAnalysis, toggleGroup,
+    };
+  }
+}).mount('#app');
+</script>
+
+</body>
+</html>
