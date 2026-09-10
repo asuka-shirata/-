@@ -154,32 +154,12 @@ function EmptyState({ icon, text }) {
 }
 
 /* ---------------------------------------------------------
-   CTA モーダル（ダミー予約）
---------------------------------------------------------- */
-function CtaModal({ onClose }) {
-  return (
-    <div className="fixed inset-0 bg-navy-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-7 fade-up" onClick={(e) => e.stopPropagation()}>
-        <div className="w-14 h-14 rounded-full bg-gold-100 flex items-center justify-center text-3xl mb-4">📅</div>
-        <h3 className="text-lg font-black text-navy-800 mb-2">無料オンラインカウンセリング</h3>
-        <p className="text-sm text-navy-500 leading-relaxed mb-6">
-          こちらは機能デモ版のため、実際の予約フォームには接続していません。本番環境では、この導線から専任コンサルタントとの無料相談カレンダーに遷移します。
-        </p>
-        <button onClick={onClose} className="w-full bg-navy-700 hover:bg-navy-800 text-white font-bold py-3 rounded-xl transition-colors">
-          閉じる
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/* ---------------------------------------------------------
    ヘッダー
 --------------------------------------------------------- */
-function Header({ onCtaClick }) {
+function Header() {
   return (
     <header className="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-navy-100">
-      <div className="max-w-6xl mx-auto px-5 py-4 flex items-center justify-between gap-4">
+      <div className="max-w-6xl mx-auto px-5 py-4 flex items-center gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-navy-700 text-gold-300 flex items-center justify-center font-black text-lg shrink-0">AI</div>
           <div>
@@ -187,12 +167,6 @@ function Header({ onCtaClick }) {
             <p className="text-[11px] sm:text-xs text-navy-400 leading-tight">折込・SEO・MEO・口コミ分析をAIがまるごとサポート</p>
           </div>
         </div>
-        <button
-          onClick={onCtaClick}
-          className="shrink-0 bg-gold-500 hover:bg-gold-600 text-white font-bold text-xs sm:text-sm px-3.5 sm:px-5 py-2.5 rounded-xl shadow-card transition-colors"
-        >
-          無料オンライン<span className="hidden sm:inline">カウンセリングを</span>予約する
-        </button>
       </div>
     </header>
   );
@@ -708,18 +682,16 @@ function AnalysisTab() {
 --------------------------------------------------------- */
 function App() {
   const [tab, setTab] = useState("seo");
-  const [showCta, setShowCta] = useState(false);
 
   return (
     <div className="min-h-screen">
-      <Header onCtaClick={() => setShowCta(true)} />
+      <Header />
       <TabNav active={tab} onChange={setTab} />
       <main className="max-w-6xl mx-auto px-5 py-6 pb-16">
         {tab === "seo" && <SeoTab />}
         {tab === "flyer" && <FlyerTab />}
         {tab === "analysis" && <AnalysisTab />}
       </main>
-      {showCta && <CtaModal onClose={() => setShowCta(false)} />}
     </div>
   );
 }
