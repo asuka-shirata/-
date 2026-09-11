@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>買取集客AIアシスタント</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: { sans: ['"Noto Sans JP"', 'sans-serif'] },
+        colors: {
+          navy: { 50:'#f0f4f8',100:'#dbe4ee',200:'#b7c9dd',300:'#8ea9c6',400:'#5d80a3',500:'#3d5f80',600:'#2c4763',700:'#233a50',800:'#1c2e40',900:'#162432' },
+          gold: { 50:'#fdf8ec',100:'#faedc7',200:'#f4da8c',300:'#edc255',400:'#e3a72e',500:'#c98c1c',600:'#a56f16',700:'#7d5412' },
+        },
+        boxShadow: {
+          card: '0 2px 10px -2px rgba(22,36,50,0.08), 0 8px 24px -8px rgba(22,36,50,0.10)',
+        }
+      }
+    }
+  }
+</script>
+<style>
+  * { font-family: 'Noto Sans JP', sans-serif; }
+  body { background: #f4f6f9; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+  .fade-up { animation: fadeUp .4s ease-out both; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner { animation: spin 0.8s linear infinite; }
+  @keyframes pulseDot { 0%,80%,100% { opacity:.25; } 40% { opacity:1; } }
+  .pulse-dot { animation: pulseDot 1.4s infinite; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState } = React;
+
+/* ---------------------------------------------------------
+   マスターデータ
+--------------------------------------------------------- */
+const ITEM_TYPES = [
+  { id: "bag", label: "ブランドバッグ", emoji: "👜", hashtags: ["ブランドバッグ買取", "バッグ好きな人と繋がりたい"] },
+  { id: "watch", label: "腕時計", emoji: "⌚", hashtags: ["腕時計買取", "時計好きな人と繋がりたい"] },
+  { id: "jewelry", label: "貴金属・宝石", emoji: "💍", hashtags: ["貴金属買取", "ジュエリー買取"] },
+  { id: "kimono", label: "着物・骨董品", emoji: "🎎", hashtags: ["着物買取", "骨董品買取"] },
+  { id: "other", label: "その他ブランド品", emoji: "✨", hashtags: ["ブランド品買取", "断捨離"] },
+];
+
+const CONDITIONS = [
+  { id: "S", label: "S（新品・未使用同様）", note: "目立った傷や汚れがなく、非常に良い状態" },
+  { id: "A", label: "A（美品）", note: "使用感は少なく、状態の良いお品物" },
+  { id: "B", label: "B（使用感あり）", note: "使用に伴う多少の傷・スレがあるお品物" },
+  { id: "C", label: "C（傷・汚れあり）", note: "傷や汚れが目立つが、査定価値のあるお品物" },
+];
+
+/* ---------------------------------------------------------
+   共通 UI パーツ
+--------------------------------------------------------- */
+function SectionCard({ children, className = "" }) {
+  return <div className={`bg-white rounded-2xl shadow-card border border-navy-100 ${className}`}>{children}</div>;
+}
+
+function Badge({ children, color = "gold" }) {
+  const styles = {
+    gold: "bg-gold-100 text-gold-700",
+    navy: "bg-navy-100 text-navy-700",
+    green: "bg-emerald-100 text-emerald-700",
+  };
+  return <span className={`inline-block text-sm font-bold px-3 py-1.5 rounded-full ${styles[color]}`}>{children}</span>;
+}
+
+function PrimaryButton({ children, onClick, loading, disabled, className = "" }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled || loading}
+      className={`inline-flex items-center justify-center gap-2 bg-navy-700 hover:bg-navy-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black px-6 py-4 rounded-xl shadow-card transition-colors text-lg ${className}`}
+    >
+      {loading && (
+        <svg className="spinner w-5 h-5" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.25" />
+          <path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+        </svg>
+      )}
+      {loading ? "AIが生成中…" : children}
+    </button>
+  );
+}
+
+function CopyButton({ text }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    try {
+      navigator.clipboard.writeText(text);
+    } catch (e) {}
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  return (
+    <button
+      onClick={handleCopy}
+      className="text-sm font-bold px-4 py-2 rounded-lg border border-navy-200 text-navy-600 hover:bg-navy-50 transition-colors shrink-0"
+    >
+      {copied ? "コピーしました！" : "コピーする"}
+    </button>
+  );
+}
+
+function EmptyState({ icon, text }) {
+  return (
+    <div className="flex flex-col items-center justify-center text-center py-20 px-6 text-navy-300">
+      <div className="text-6xl mb-4">{icon}</div>
+      <p className="text-base text-navy-400 max-w-sm leading-relaxed">{text}</p>
+    </div>
+  );
+}
+
+function LoadingCard() {
+  return (
+    <SectionCard className="p-12 text-center">
+      <div className="flex justify-center gap-2 mb-5">
+        <span className="w-3 h-3 rounded-full bg-navy-400 pulse-dot" style={{ animationDelay: "0s" }}></span>
+        <span className="w-3 h-3 rounded-full bg-navy-400 pulse-dot" style={{ animationDelay: "0.2s" }}></span>
+        <span className="w-3 h-3 rounded-full bg-navy-400 pulse-dot" style={{ animationDelay: "0.4s" }}></span>
+      </div>
+      <p className="text-navy-500 font-bold">AIがブログ記事とInstagram投稿文を作成しています…</p>
+      <p className="text-navy-300 text-sm mt-1">少々お待ちください</p>
+    </SectionCard>
+  );
+}
+
+/* ---------------------------------------------------------
+   ヘッダー
+--------------------------------------------------------- */
+function Header() {
+  return (
+    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-navy-100">
+      <div className="max-w-5xl mx-auto px-5 py-5 flex items-center gap-4">
+        <div className="w-12 h-12 rounded-xl bg-navy-700 text-gold-300 flex items-center justify-center font-black text-xl shrink-0">AI</div>
+        <div>
+          <h1 className="font-black text-navy-800 leading-tight text-xl sm:text-2xl">買取集客AIアシスタント</h1>
+          <p className="text-sm text-navy-400 leading-tight mt-0.5">買取品の情報を入力するだけで、集客用コンテンツを自動作成</p>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+/* ---------------------------------------------------------
+   モック生成ロジック
+--------------------------------------------------------- */
+function buildSeoArticle({ item, brandName, condition, region, episode }) {
+  const r = region || "地域";
+  const name = brandName || `${item.label}`;
+  const cond = condition;
+  const ep = episode.trim();
+
+  const title = `【${r}の買取なら】${name}を高価買取｜${cond.label}クラスの査定ポイントを解説`;
+
+  const introLines = [
+    `${r}で${item.label}の買取をお考えの方へ。`,
+    `今回は実際にお持ち込みいただいた「${name}」の買取事例をもとに、査定のポイントと高く売るコツをご紹介します。`,
+  ];
+
+  const episodeParagraph = ep
+    ? `今回お持ち込みいただいたお客様は、「${ep}」とお話しくださいました。当店ではこうした背景も丁寧にお伺いしながら、お客様に安心してお任せいただけるよう査定を行っております。`
+    : `お品物ひとつひとつに、お客様それぞれの思い出やご事情があります。当店ではそうした背景にも耳を傾けながら、丁寧な査定を心がけております。`;
+
+  const conditionParagraph = `今回のお品物は状態ランク「${cond.id}」（${cond.note}）に該当します。査定額は状態だけでなく、付属品の有無やブランド・モデルの人気度によっても変動しますので、まずはお気軽に無料査定をご利用ください。`;
+
+  const points = [
+    `${r}エリアでの${item.label}買取実績が豊富な査定士が対応`,
+    `付属品（箱・保証書・袋など）があれば査定額アップの可能性あり`,
+    `出張査定・宅配査定にも対応、店頭にお越しいただかなくてもOK`,
+    `査定は無料、キャンセルも可能なので安心してご相談いただけます`,
+  ];
+
+  const closing = `「${name}」に限らず、${r}エリアでの${item.label}買取は当店にお任せください。ご自宅に眠っている品物がございましたら、この機会にぜひ無料査定をご利用ください。`;
+
+  return { title, introLines, episodeParagraph, conditionParagraph, points, closing };
+}
+
+function buildInstagramPost({ item, brandName, condition, region, episode }) {
+  const r = region || "地域";
+  const name = brandName || item.label;
+  const ep = episode.trim();
+
+  const lines = [
+    `${item.emoji} 本日の買取実績のご紹介 ${item.emoji}`,
+    ``,
+    `${name}をお持ち込みいただきました✨`,
+    `状態ランクは「${condition.id}」（${condition.note}）でした🔍`,
+  ];
+
+  if (ep) {
+    lines.push(``, `📝 お客様エピソード`, `「${ep}」とのことで、大切に使われていた様子が伝わってきました🙏`);
+  }
+
+  lines.push(
+    ``,
+    `${r}で${item.label}の買取なら当店へ！`,
+    `査定は無料、出張査定も対応しています🚗💨`,
+    `お気軽にDMまたはお電話でご相談ください📩`
+  );
+
+  const body = lines.join("\n");
+
+  const hashtags = [
+    `#${r}`,
+    `#${r}買取`,
+    `#買取`,
+    `#出張買取`,
+    ...item.hashtags.map((h) => `#${h}`),
+  ];
+
+  return { body, hashtags };
+}
+
+/* ---------------------------------------------------------
+   入力フォーム
+--------------------------------------------------------- */
+function InputForm({ form, setForm, onGenerate, loading }) {
+  const update = (key) => (e) => setForm({ ...form, [key]: e.target.value });
+
+  return (
+    <SectionCard className="p-6 sm:p-7 h-fit">
+      <h2 className="font-black text-navy-800 text-lg mb-1">買取品の情報を入力</h2>
+      <p className="text-sm text-navy-400 mb-6 leading-relaxed">入力した内容をもとに、AIがSEO記事とInstagram投稿文を作成します。</p>
+
+      <label className="block text-base font-bold text-navy-700 mb-2">買取品目</label>
+      <select
+        value={form.itemId}
+        onChange={update("itemId")}
+        className="w-full border border-navy-200 rounded-xl px-4 py-3 mb-5 text-base focus:outline-none focus:ring-2 focus:ring-navy-300"
+      >
+        {ITEM_TYPES.map((it) => (
+          <option key={it.id} value={it.id}>{it.emoji} {it.label}</option>
+        ))}
+      </select>
+
+      <label className="block text-base font-bold text-navy-700 mb-2">ブランド名・商品名</label>
+      <input
+        value={form.brandName}
+        onChange={update("brandName")}
+        placeholder="例）ロレックス サブマリーナ"
+        className="w-full border border-navy-200 rounded-xl px-4 py-3 mb-5 text-base focus:outline-none focus:ring-2 focus:ring-navy-300"
+      />
+
+      <label className="block text-base font-bold text-navy-700 mb-2">地域名（記事・投稿に使用）</label>
+      <input
+        value={form.region}
+        onChange={update("region")}
+        placeholder="例）横浜市、渋谷区 など"
+        className="w-full border border-navy-200 rounded-xl px-4 py-3 mb-5 text-base focus:outline-none focus:ring-2 focus:ring-navy-300"
+      />
+
+      <label className="block text-base font-bold text-navy-700 mb-2">状態</label>
+      <select
+        value={form.conditionId}
+        onChange={update("conditionId")}
+        className="w-full border border-navy-200 rounded-xl px-4 py-3 mb-5 text-base focus:outline-none focus:ring-2 focus:ring-navy-300"
+      >
+        {CONDITIONS.map((c) => (
+          <option key={c.id} value={c.id}>{c.label}</option>
+        ))}
+      </select>
+
+      <label className="block text-base font-bold text-navy-700 mb-2">買取のポイント・お客様とのエピソード</label>
+      <textarea
+        value={form.episode}
+        onChange={update("episode")}
+        placeholder="例）長年大切に使われていたが、断捨離のため査定にお持ち込みいただいた。付属品の箱・保証書も揃っていた。"
+        rows={4}
+        className="w-full border border-navy-200 rounded-xl px-4 py-3 mb-6 text-base focus:outline-none focus:ring-2 focus:ring-navy-300 resize-none"
+      />
+
+      <PrimaryButton onClick={onGenerate} loading={loading} className="w-full">
+        ✨ AIで集客用コンテンツを生成
+      </PrimaryButton>
+    </SectionCard>
+  );
+}
+
+/* ---------------------------------------------------------
+   出力エリア
+--------------------------------------------------------- */
+function SeoArticleCard({ article }) {
+  const fullText = [
+    article.title,
+    "",
+    ...article.introLines,
+    "",
+    article.episodeParagraph,
+    "",
+    article.conditionParagraph,
+    "",
+    "◆ 当店が選ばれる理由",
+    ...article.points.map((p) => `・${p}`),
+    "",
+    article.closing,
+  ].join("\n");
+
+  return (
+    <SectionCard className="p-6 sm:p-7 fade-up">
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <Badge color="navy">① HP・MEO用 SEOブログ記事</Badge>
+        <CopyButton text={fullText} />
+      </div>
+      <h3 className="font-black text-navy-800 text-xl leading-snug mb-4">{article.title}</h3>
+      <div className="space-y-3 text-navy-700 leading-relaxed">
+        {article.introLines.map((l, i) => <p key={i}>{l}</p>)}
+        <p className="bg-navy-50 rounded-xl p-4">{article.episodeParagraph}</p>
+        <p>{article.conditionParagraph}</p>
+        <div className="border border-navy-100 rounded-xl p-4">
+          <p className="font-black text-navy-800 mb-2">◆ 当店が選ばれる理由</p>
+          <ul className="space-y-1.5">
+            {article.points.map((p, i) => (
+              <li key={i} className="flex items-start gap-2">
+                <span className="text-gold-500 font-black mt-0.5">✓</span>
+                <span>{p}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <p>{article.closing}</p>
+      </div>
+    </SectionCard>
+  );
+}
+
+function InstagramPostCard({ post }) {
+  const fullText = post.body + "\n\n" + post.hashtags.join(" ");
+
+  return (
+    <SectionCard className="p-6 sm:p-7 fade-up">
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <Badge color="green">② Instagram用 投稿文</Badge>
+        <CopyButton text={fullText} />
+      </div>
+      <div className="border border-navy-100 rounded-2xl p-5 bg-gradient-to-b from-gold-50/60 to-white">
+        <p className="text-navy-700 whitespace-pre-line leading-relaxed mb-4">{post.body}</p>
+        <div className="flex flex-wrap gap-2">
+          {post.hashtags.map((h, i) => (
+            <span key={i} className="text-sm bg-white border border-navy-200 text-navy-500 px-3 py-1 rounded-full">{h}</span>
+          ))}
+        </div>
+      </div>
+    </SectionCard>
+  );
+}
+
+/* ---------------------------------------------------------
+   App
+--------------------------------------------------------- */
+function App() {
+  const [form, setForm] = useState({
+    itemId: ITEM_TYPES[0].id,
+    brandName: "",
+    region: "",
+    conditionId: CONDITIONS[1].id,
+    episode: "",
+  });
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const generate = () => {
+    setLoading(true);
+    setResult(null);
+    const item = ITEM_TYPES.find((it) => it.id === form.itemId);
+    const condition = CONDITIONS.find((c) => c.id === form.conditionId);
+    const payload = { item, brandName: form.brandName.trim(), region: form.region.trim(), condition, episode: form.episode };
+
+    setTimeout(() => {
+      setResult({
+        article: buildSeoArticle(payload),
+        post: buildInstagramPost(payload),
+      });
+      setLoading(false);
+    }, 2200);
+  };
+
+  return (
+    <div className="min-h-screen">
+      <Header />
+      <main className="max-w-5xl mx-auto px-5 py-8 pb-16 grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6">
+        <InputForm form={form} setForm={setForm} onGenerate={generate} loading={loading} />
+
+        <div className="space-y-6">
+          {!result && !loading && (
+            <SectionCard>
+              <EmptyState icon="📝" text="左のフォームに買取品の情報を入力し「AIで集客用コンテンツを生成」を押すと、ここにSEO記事とInstagram投稿文が表示されます。" />
+            </SectionCard>
+          )}
+          {loading && <LoadingCard />}
+          {result && (
+            <>
+              <SeoArticleCard article={result.article} />
+              <InstagramPostCard post={result.post} />
+            </>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
