@@ -132,7 +132,7 @@ function LoadingCard() {
         <span className="w-3 h-3 rounded-full bg-navy-400 pulse-dot" style={{ animationDelay: "0.2s" }}></span>
         <span className="w-3 h-3 rounded-full bg-navy-400 pulse-dot" style={{ animationDelay: "0.4s" }}></span>
       </div>
-      <p className="text-navy-500 font-bold">AIがブログ記事とInstagram投稿文を作成しています…</p>
+      <p className="text-navy-500 font-bold">AIがAEO対策記事とInstagram投稿文を作成しています…</p>
       <p className="text-navy-300 text-sm mt-1">少々お待ちください</p>
     </SectionCard>
   );
@@ -148,7 +148,7 @@ function Header() {
         <div className="w-12 h-12 rounded-xl bg-navy-700 text-gold-300 flex items-center justify-center font-black text-xl shrink-0">AI</div>
         <div>
           <h1 className="font-black text-navy-800 leading-tight text-xl sm:text-2xl">買取集客AIアシスタント</h1>
-          <p className="text-sm text-navy-400 leading-tight mt-0.5">買取品の情報を入力するだけで、集客用コンテンツを自動作成</p>
+          <p className="text-sm text-navy-400 leading-tight mt-0.5">買取品の情報を入力するだけで、AI検索にも強いAEO対策記事とInstagram投稿文を自動作成</p>
         </div>
       </div>
     </header>
@@ -158,35 +158,43 @@ function Header() {
 /* ---------------------------------------------------------
    モック生成ロジック
 --------------------------------------------------------- */
-function buildSeoArticle({ item, brandName, condition, region, episode }) {
+function buildAeoArticle({ item, brandName, condition, region, episode }) {
   const r = region || "地域";
-  const name = brandName || `${item.label}`;
+  const name = brandName || item.label;
   const cond = condition;
   const ep = episode.trim();
 
-  const title = `【${r}の買取なら】${name}を高価買取｜${cond.label}クラスの査定ポイントを解説`;
+  // AEO(Answer Engine Optimization)を意識し、
+  // 「質問形のタイトル」→「結論ファーストの要約」→「Q&A」の順で
+  // ChatGPT・Perplexity・Google AI Overviewなどの生成AIが引用しやすい構成にする
+  const title = `${r}で${name}を売るならどこがいい？買取相場と高く売るコツを解説`;
 
-  const introLines = [
-    `${r}で${item.label}の買取をお考えの方へ。`,
-    `今回は実際にお持ち込みいただいた「${name}」の買取事例をもとに、査定のポイントと高く売るコツをご紹介します。`,
-  ];
+  const directAnswer = `結論：${r}で${item.label}（${name}相当）を売るなら、状態ランク「${cond.id}」（${cond.note}）を踏まえたうえで、付属品の有無やブランド・モデルの人気度も加味した無料査定を受けるのが確実です。当店では出張査定・即日査定にも対応しており、${r}にお住まいの方でもご自宅から気軽にご相談いただけます。`;
 
-  const episodeParagraph = ep
-    ? `今回お持ち込みいただいたお客様は、「${ep}」とお話しくださいました。当店ではこうした背景も丁寧にお伺いしながら、お客様に安心してお任せいただけるよう査定を行っております。`
-    : `お品物ひとつひとつに、お客様それぞれの思い出やご事情があります。当店ではそうした背景にも耳を傾けながら、丁寧な査定を心がけております。`;
-
-  const conditionParagraph = `今回のお品物は状態ランク「${cond.id}」（${cond.note}）に該当します。査定額は状態だけでなく、付属品の有無やブランド・モデルの人気度によっても変動しますので、まずはお気軽に無料査定をご利用ください。`;
-
-  const points = [
-    `${r}エリアでの${item.label}買取実績が豊富な査定士が対応`,
-    `付属品（箱・保証書・袋など）があれば査定額アップの可能性あり`,
-    `出張査定・宅配査定にも対応、店頭にお越しいただかなくてもOK`,
-    `査定は無料、キャンセルも可能なので安心してご相談いただけます`,
+  const faqs = [
+    {
+      q: `${r}で${item.label}を売る場合、相場はどのくらいですか？`,
+      a: `相場はブランド・モデル・状態によって大きく変動するため一概には言えませんが、状態ランク「${cond.id}」（${cond.note}）のお品物であれば、付属品（箱・保証書・袋など）が揃っているほど査定額アップが期待できます。まずは無料査定で概算をご確認いただくのが確実です。`,
+    },
+    {
+      q: `${name}のようなお品物を高く売るコツはありますか？`,
+      a: ep
+        ? `今回のお客様は「${ep}」という状況でお持ち込みくださいました。このように購入時期や使用状況、付属品の有無を査定士に伝えていただくことで、より的確な査定が可能になります。`
+        : `購入時期・使用状況・付属品の有無を事前に整理し、査定時に伝えていただくことで、より的確な査定額の提示が可能になります。`,
+    },
+    {
+      q: `${r}エリアで出張査定や即日査定は対応していますか？`,
+      a: `はい、対応しています。${r}エリアへの出張査定に加え、店頭にお越しいただかなくても宅配査定でお申し込みいただけます。査定は無料で、キャンセルも可能です。`,
+    },
+    {
+      q: `${cond.label}の状態でも査定してもらえますか？`,
+      a: `${cond.note}に該当するお品物も査定対象です。状態だけでなく、ブランド・モデルの需要によって査定額は変わりますので、まずはお気軽にご相談ください。`,
+    },
   ];
 
   const closing = `「${name}」に限らず、${r}エリアでの${item.label}買取は当店にお任せください。ご自宅に眠っている品物がございましたら、この機会にぜひ無料査定をご利用ください。`;
 
-  return { title, introLines, episodeParagraph, conditionParagraph, points, closing };
+  return { title, directAnswer, faqs, closing };
 }
 
 function buildInstagramPost({ item, brandName, condition, region, episode }) {
@@ -234,7 +242,7 @@ function InputForm({ form, setForm, onGenerate, loading }) {
   return (
     <SectionCard className="p-6 sm:p-7 h-fit">
       <h2 className="font-black text-navy-800 text-lg mb-1">買取品の情報を入力</h2>
-      <p className="text-sm text-navy-400 mb-6 leading-relaxed">入力した内容をもとに、AIがSEO記事とInstagram投稿文を作成します。</p>
+      <p className="text-sm text-navy-400 mb-6 leading-relaxed">入力した内容をもとに、AIがAEO対策記事とInstagram投稿文を作成します。</p>
 
       <label className="block text-base font-bold text-navy-700 mb-2">買取品目</label>
       <select
@@ -293,46 +301,49 @@ function InputForm({ form, setForm, onGenerate, loading }) {
 /* ---------------------------------------------------------
    出力エリア
 --------------------------------------------------------- */
-function SeoArticleCard({ article }) {
+function AeoArticleCard({ article }) {
   const fullText = [
     article.title,
     "",
-    ...article.introLines,
+    article.directAnswer,
     "",
-    article.episodeParagraph,
-    "",
-    article.conditionParagraph,
-    "",
-    "◆ 当店が選ばれる理由",
-    ...article.points.map((p) => `・${p}`),
-    "",
+    ...article.faqs.flatMap((f) => [`Q. ${f.q}`, `A. ${f.a}`, ""]),
     article.closing,
   ].join("\n");
 
   return (
     <SectionCard className="p-6 sm:p-7 fade-up">
       <div className="flex items-center justify-between gap-3 mb-4">
-        <Badge color="navy">① HP・MEO用 SEOブログ記事</Badge>
+        <Badge color="navy">① AEO対策記事（AI検索・生成AI向け）</Badge>
         <CopyButton text={fullText} />
       </div>
       <h3 className="font-black text-navy-800 text-xl leading-snug mb-4">{article.title}</h3>
-      <div className="space-y-3 text-navy-700 leading-relaxed">
-        {article.introLines.map((l, i) => <p key={i}>{l}</p>)}
-        <p className="bg-navy-50 rounded-xl p-4">{article.episodeParagraph}</p>
-        <p>{article.conditionParagraph}</p>
-        <div className="border border-navy-100 rounded-xl p-4">
-          <p className="font-black text-navy-800 mb-2">◆ 当店が選ばれる理由</p>
-          <ul className="space-y-1.5">
-            {article.points.map((p, i) => (
-              <li key={i} className="flex items-start gap-2">
-                <span className="text-gold-500 font-black mt-0.5">✓</span>
-                <span>{p}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <p>{article.closing}</p>
+
+      <div className="bg-navy-50 border border-navy-100 rounded-xl p-4 mb-5">
+        <p className="text-xs font-black text-navy-400 mb-1.5">AIの回答・要約に引用されやすい「結論」</p>
+        <p className="text-navy-700 leading-relaxed">{article.directAnswer}</p>
       </div>
+
+      <div className="space-y-4">
+        {article.faqs.map((f, i) => (
+          <div key={i} className="border border-navy-100 rounded-xl p-4">
+            <p className="font-black text-navy-800 mb-2 flex items-start gap-2">
+              <span className="text-gold-500 shrink-0">Q.</span>
+              <span>{f.q}</span>
+            </p>
+            <p className="text-navy-600 leading-relaxed flex items-start gap-2">
+              <span className="text-navy-300 font-black shrink-0">A.</span>
+              <span>{f.a}</span>
+            </p>
+          </div>
+        ))}
+      </div>
+
+      <p className="text-navy-700 leading-relaxed mt-5">{article.closing}</p>
+
+      <p className="text-xs text-navy-300 mt-4 leading-relaxed">
+        ※ 結論ファースト＋Q&A形式の構成により、ChatGPTやPerplexity、Google AI Overviewなどの生成AI検索エンジンに引用・要約されやすくなります（AEO：Answer Engine Optimization）。
+      </p>
     </SectionCard>
   );
 }
@@ -381,7 +392,7 @@ function App() {
 
     setTimeout(() => {
       setResult({
-        article: buildSeoArticle(payload),
+        article: buildAeoArticle(payload),
         post: buildInstagramPost(payload),
       });
       setLoading(false);
@@ -397,13 +408,13 @@ function App() {
         <div className="space-y-6">
           {!result && !loading && (
             <SectionCard>
-              <EmptyState icon="📝" text="左のフォームに買取品の情報を入力し「AIで集客用コンテンツを生成」を押すと、ここにSEO記事とInstagram投稿文が表示されます。" />
+              <EmptyState icon="📝" text="左のフォームに買取品の情報を入力し「AIで集客用コンテンツを生成」を押すと、ここにAEO対策記事とInstagram投稿文が表示されます。" />
             </SectionCard>
           )}
           {loading && <LoadingCard />}
           {result && (
             <>
-              <SeoArticleCard article={result.article} />
+              <AeoArticleCard article={result.article} />
               <InstagramPostCard post={result.post} />
             </>
           )}
