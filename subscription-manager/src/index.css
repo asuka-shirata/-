@@ -1,17 +1,43 @@
 :root {
-  --bg: #f4f6f8;
-  --surface: #ffffff;
-  --border: #e3e7ec;
-  --text: #1f2933;
-  --text-muted: #6b7682;
-  --accent: #2c4a6e;
-  --accent-soft: #e9eef4;
+  /* 面 */
+  --bg: #0e1116;
+  --surface: #161b22;
+  --surface-raised: #1e2530;
+  --border: rgba(255, 255, 255, 0.06);
 
-  font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Noto Sans JP', 'Segoe UI', sans-serif;
-  line-height: 1.5;
+  /* テキスト */
+  --text: #f2efe9;
+  --text-muted: #8b93a1;
+
+  /* アクセント（使う場所を絞る） */
+  --gold: #c8a96a;
+  --gold-light: #e3c98e;
+  --gold-dark: #b08d4a;
+  --gold-gradient: linear-gradient(135deg, var(--gold-light) 0%, var(--gold-dark) 100%);
+  --gold-border: rgba(200, 169, 106, 0.28);
+  --gold-ring: rgba(200, 169, 106, 0.25);
+
+  /* 状態色 */
+  --danger: #d96c6c;
+  --positive: #6fb89a;
+
+  /* フォント */
+  --font-body: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+  --font-heading: 'Zen Kaku Gothic New', var(--font-body);
+  --font-numeral: 'Cormorant Garamond', 'Times New Roman', serif;
+  --font-label: 'Inter', var(--font-body);
+
+  --radius: 16px;
+  --radius-sm: 12px;
+  --ease: 0.18s ease;
+
+  color-scheme: dark;
+  font-family: var(--font-body);
+  line-height: 1.6;
   color: var(--text);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
 }
 
 * {
@@ -23,122 +49,190 @@ body {
   background: var(--bg);
 }
 
+button,
+input,
+select {
+  font-family: inherit;
+}
+
 .app {
   max-width: 480px;
   margin: 0 auto;
-  padding: 16px 16px 40px;
+  padding: 28px 20px 64px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 24px;
 }
 
 .header {
-  padding: 8px 4px 0;
+  padding: 4px 4px 0;
 }
 
 .app-title {
   margin: 0;
-  font-size: 18px;
+  font-family: var(--font-heading);
+  font-size: 20px;
   font-weight: 700;
+  letter-spacing: 0.04em;
 }
 
-/* 合計金額（画面上部で強調） */
+/* 小さなラベル */
+.eyebrow,
+.total-label,
+.field-label {
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+/* ヒーロー：月額合計 */
 .total-card {
-  background: var(--accent);
-  color: #ffffff;
-  border-radius: 16px;
-  padding: 24px 20px;
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius);
+  border: 1px solid var(--gold-border);
+  background: linear-gradient(160deg, var(--surface-raised) 0%, var(--surface) 58%, #12161c 100%);
+  padding: 32px 28px 28px;
+}
+
+/* 左上のごく控えめな光 */
+.total-card::before {
+  content: '';
+  position: absolute;
+  top: -120px;
+  left: -120px;
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(circle, rgba(227, 201, 142, 0.12) 0%, rgba(227, 201, 142, 0) 70%);
+  pointer-events: none;
+}
+
+.total-card > * {
+  position: relative;
 }
 
 .total-label {
   margin: 0;
-  font-size: 14px;
-  opacity: 0.85;
 }
 
 .total-amount {
-  margin: 4px 0 8px;
-  font-size: 44px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.2;
+  margin: 10px 0 14px;
+  font-family: var(--font-numeral);
+  font-size: 64px;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: 0.01em;
 }
 
 .total-currency {
-  font-size: 28px;
-  margin-right: 2px;
+  font-size: 34px;
+  margin-right: 4px;
+  color: var(--gold);
+}
+
+.total-number {
+  background: var(--gold-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .total-sub {
   margin: 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
   font-size: 13px;
-  opacity: 0.8;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
 }
 
-/* カード共通 */
+/* カード共通（影なし・極細線） */
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 20px;
+  border-radius: var(--radius);
+  padding: 28px 24px;
 }
 
 .section-title {
   margin: 0;
-  font-size: 15px;
+  font-family: var(--font-heading);
+  font-size: 16px;
   font-weight: 700;
+  letter-spacing: 0.03em;
 }
 
 /* 追加フォーム */
 .add-form {
-  margin-top: 16px;
+  margin-top: 24px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 18px;
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-}
-
-.field-label {
-  font-size: 13px;
-  color: var(--text-muted);
+  gap: 8px;
 }
 
 .input {
   width: 100%;
   font-size: 16px; /* iOS のズームを防ぐため 16px 以上 */
-  padding: 12px 14px;
+  padding: 14px 16px;
   border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
   color: var(--text);
+  transition: border-color var(--ease), box-shadow var(--ease);
+}
+
+.input::placeholder {
+  color: #6b7380;
 }
 
 .input:focus {
   outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--gold-ring);
 }
 
 .add-btn {
-  margin-top: 4px;
+  margin-top: 6px;
   font-size: 16px;
   font-weight: 700;
-  padding: 14px;
-  border: none;
-  border-radius: 10px;
-  background: var(--accent);
-  color: #ffffff;
+  letter-spacing: 0.06em;
+  padding: 16px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--gold-gradient);
+  color: var(--bg);
   cursor: pointer;
+  transition: filter var(--ease), transform var(--ease), box-shadow var(--ease), opacity var(--ease);
 }
 
+.add-btn:hover:not(:disabled) {
+  filter: brightness(1.07);
+}
+
+.add-btn:active:not(:disabled) {
+  transform: scale(0.985);
+}
+
+.add-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--gold-ring);
+}
+
+/* 無効時はグレーではなく暗めのゴールドで薄く */
 .add-btn:disabled {
-  background: #b9c3cf;
+  background: rgba(200, 169, 106, 0.1);
+  border-color: rgba(200, 169, 106, 0.18);
+  color: rgba(200, 169, 106, 0.5);
   cursor: not-allowed;
 }
 
@@ -153,23 +247,34 @@ body {
 .text-btn {
   border: none;
   background: none;
-  color: var(--accent);
+  color: var(--text-muted);
   font-size: 13px;
-  padding: 4px;
+  padding: 6px 4px;
+  border-radius: 6px;
   cursor: pointer;
+  transition: color var(--ease), box-shadow var(--ease);
+}
+
+.text-btn:hover {
+  color: var(--text);
+}
+
+.text-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--gold-ring);
 }
 
 .list {
   list-style: none;
-  margin: 12px 0 0;
+  margin: 16px 0 0;
   padding: 0;
 }
 
 .list-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 0;
+  gap: 14px;
+  padding: 20px 0;
   border-bottom: 1px solid var(--border);
 }
 
@@ -189,48 +294,69 @@ body {
 
 .item-name {
   font-size: 15px;
+  font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .item-price {
-  font-size: 15px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
+  font-family: var(--font-numeral);
+  font-size: 22px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums lining-nums;
   white-space: nowrap;
 }
 
 .item-price small {
+  font-family: var(--font-body);
   font-size: 12px;
   font-weight: 400;
   color: var(--text-muted);
+  margin-left: 2px;
 }
 
+/* 削除：普段は控えめ、ホバー／タップ時だけ赤く */
 .delete-btn {
   flex-shrink: 0;
   font-size: 13px;
-  padding: 6px 12px;
+  padding: 7px 14px;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
+  border-radius: 10px;
+  background: transparent;
   color: var(--text-muted);
   cursor: pointer;
+  transition: color var(--ease), border-color var(--ease), background-color var(--ease), transform var(--ease);
 }
 
-.delete-btn:hover {
-  border-color: var(--text-muted);
-  color: var(--text);
+.delete-btn:active,
+.delete-btn:focus-visible {
+  outline: none;
+  color: var(--danger);
+  border-color: rgba(217, 108, 108, 0.5);
+  background: rgba(217, 108, 108, 0.08);
+}
+
+.delete-btn:active {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) {
+  .delete-btn:hover {
+    color: var(--danger);
+    border-color: rgba(217, 108, 108, 0.5);
+    background: rgba(217, 108, 108, 0.08);
+  }
 }
 
 .empty {
-  margin: 16px 0 0;
+  margin: 20px 0 0;
   font-size: 14px;
   color: var(--text-muted);
 }
 
 @media (min-width: 640px) {
   .app {
-    padding-top: 40px;
+    padding-top: 56px;
   }
 }

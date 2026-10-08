@@ -73,7 +73,7 @@ function App() {
         <p className="total-label">毎月の支払い合計</p>
         <p className="total-amount">
           <span className="total-currency">¥</span>
-          {yen.format(total)}
+          <span className="total-number">{yen.format(total)}</span>
         </p>
         <p className="total-sub">
           年間 ¥{yen.format(total * 12)} ・ {subscriptions.length}件のサブスク
