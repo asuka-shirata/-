@@ -15,6 +15,7 @@ Claude Code の学習・実践用プロジェクト。複数のサブプロジ�
 | `フォルダ整理/` | ファイル自動仕分けスクリプト |
 | `売上分析/` | CSV データ分析・レポート生成スクリプト |
 | `subscription-manager/` | サブスク管理アプリ（Vite + React + TypeScript） |
+| `backoffice-automation/` | 給与計算・経理仕訳の自動化デモ（Python + Streamlit） |
 
 ## Git 運用ルール
 
